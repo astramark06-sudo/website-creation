@@ -161,13 +161,18 @@ async function start(){
       if(!confirm('Replace the current draft with this imported project?'))return;
       project=candidate;dirty();render();$('frame').srcdoc='';status('Imported as an unapproved draft.');
     }catch(e){status(e.message);}finally{$('import').value='';}});
+    let referenceRevision=0;
+    $('reference').addEventListener('change',()=>{
+      referenceRevision++;$('reference-authorized').checked=false;$('reference-report').textContent='';
+    });
+    $('reference-authorized').addEventListener('change',()=>{referenceRevision++;});
     $('analyze-reference').addEventListener('click',()=>run(async()=>{
       const files=Array.from($('reference').files);
       if(!files.length||files.length>5||!$('reference-authorized').checked)throw new Error('Select one to five authorized local HTML files and confirm permission.');
       if(files.reduce((total,file)=>total+file.size,0)>65536)throw new Error('Combined references exceed 64 KiB.');
-      const revision=draftRevision;
+      const revision=draftRevision, selectionRevision=referenceRevision;
       const sameFiles=()=>files.length===$('reference').files.length&&files.every((file,index)=>file===$('reference').files[index]);
-      const current=()=>revision===draftRevision&&sameFiles()&&$('reference-authorized').checked;
+      const current=()=>revision===draftRevision&&selectionRevision===referenceRevision&&sameFiles()&&$('reference-authorized').checked;
       try{
         const sources=await Promise.all(files.map(file=>file.text()));
         if(!current()){status('Reference, permission or draft changed. Run analysis again.');return;}
@@ -179,7 +184,7 @@ async function start(){
         if(confirm('Replace your current project with the independently authored starter draft?')){
           project=result.project;dirty();render();$('frame').srcdoc='';status('Original reference-informed draft created. Review and customize its content.');
         }else{status('Structural report created. Existing draft unchanged.');}
-      }finally{if(sameFiles()){$('reference').value='';$('reference-authorized').checked=false;}}
+      }finally{if(sameFiles()&&selectionRevision===referenceRevision){$('reference').value='';$('reference-authorized').checked=false;}}
     }));
     $('vision-panel').hidden=!session.vision_enabled;
     $('vision-analyze').addEventListener('click',()=>run(async()=>{
