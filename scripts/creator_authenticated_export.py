@@ -29,14 +29,18 @@ SOURCE_FILES = (
     "staging_auth/html_views.py",
     "staging_auth/forms.py",
     "staging_auth/urls.py",
+    "staging_auth/login_guard.py",
+    "staging_auth/backup.py",
     "staging_auth/staging.css",
     "staging_auth/migrations/__init__.py",
     "staging_auth/migrations/0001_initial.py",
     "staging_auth/migrations/0002_workspace_description.py",
+    "staging_auth/migrations/0003_loginbudget.py",
     "staging_auth/management/__init__.py",
     "staging_auth/management/commands/__init__.py",
     "staging_auth/management/commands/provision_workspace.py",
     "staging_auth/management/commands/provision_export.py",
+    "staging_auth/management/commands/backup_staging.py",
     "staging_auth/templates/staging_auth/base.html",
     "staging_auth/templates/staging_auth/home.html",
     "staging_auth/templates/staging_auth/login.html",
@@ -63,9 +67,9 @@ Initialize the database, create a local test account interactively, provision th
     python -m django provision_export --owner TEST_USERNAME --settings=staging_auth.settings
     python -m django runserver 127.0.0.1:8769 --noreload --settings=staging_auth.settings
 
-Replace TEST_USERNAME with your existing local test account username. No credentials are included in this bundle. The framework superuser has no workspace access until provisioned. No production account recovery, TLS, rate limiting, MFA, hosting or public registration is configured.
+Replace TEST_USERNAME with your existing local test account username. No credentials are included in this bundle. The framework superuser has no workspace access until provisioned. A small installation-wide login attempt budget protects local staging only. No production account recovery, TLS, distributed rate limiting, MFA, hosting or public registration is configured.
 
-The exported workspace uses schema-aware scoped JSON records in SQLite, not the physical-table engine of the simpler relational export. The schema is fixed after provisioning. The manifest identifies the generated source and configuration; it is not a signed security certification. Keep the database and secret out of shared files.
+The exported workspace uses schema-aware scoped JSON records in SQLite, not the physical-table engine of the simpler relational export. The schema is fixed after provisioning. The manifest identifies the generated source and configuration; it is not a signed security certification. Keep the database and secret out of shared files. Stop the server before running python -m django backup_staging --output PRIVATE_NEW.sqlite3 --settings=staging_auth.settings. The checked snapshot contains private workspace data and account hashes but no active sessions.
 """
 
 
