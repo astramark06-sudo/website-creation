@@ -35,12 +35,16 @@ function render(){
     field(card,'Interaction',p.interaction,v=>p.interaction=v,{choices:['none','tasks','search']});
     p.sections.forEach((s,j)=>{
       const block=document.createElement('div');block.className='section-card';
-      field(block,'Component type',s.kind||'card',v=>{s.kind=v;render();},{choices:['card','article','callout','faq','list','steps']});
+      field(block,'Component type',s.kind||'card',v=>{s.kind=v;render();},{choices:['card','article','callout','faq','list','steps','metrics','timeline','table']});
       field(block,'Section heading',s.heading,v=>s.heading=v,{max:120});
       field(block,'Section body',s.body,v=>s.body=v,{multiline:true,max:4000});
-      if(['list','steps'].includes(s.kind)){
-        const hint=document.createElement('p');hint.className='section-hint';hint.textContent='One item per line (up to 30).';block.append(hint);
-      }
+      const hints={
+        list:'One item per line (up to 30).',steps:'One step per line (up to 30).',
+        metrics:'One metric per line: Label | Value (up to 12).',
+        timeline:'One event per line: Label | Details (up to 20).',
+        table:'First line is the header; use 2–6 pipe-separated cells per row and up to 30 data rows.'
+      };
+      if(hints[s.kind]){const hint=document.createElement('p');hint.className='section-hint';hint.textContent=hints[s.kind];block.append(hint);}
       const handle=document.createElement('button');handle.type='button';handle.className='drag-handle';handle.draggable=true;handle.textContent='Drag to reorder';handle.setAttribute('aria-label','Drag section '+(j+1)+' to reorder; use move buttons for keyboard ordering');
       handle.addEventListener('dragstart',event=>{event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',JSON.stringify({page:i,section:j}));});
       block.addEventListener('dragover',event=>{event.preventDefault();event.dataTransfer.dropEffect='move';});
