@@ -1,6 +1,7 @@
 """Original local-only data workspace. Not a public multi-user server."""
 import argparse
 import json
+import os
 import secrets
 import re
 import sqlite3
@@ -195,6 +196,35 @@ def change_item(path, payload, fields=None):
                                (item_id, field_id, target_id))
 
 
+def backup_database(source, destination, fields=None):
+    """Create a checked SQLite snapshot at a new local path, never overwrite."""
+    source, destination = Path(source), Path(destination)
+    if not source.is_file():
+        raise ValueError("No existing workspace database to back up")
+    if destination.suffix != ".sqlite3":
+        raise ValueError("Use a .sqlite3 backup filename")
+    # SQLite's backup API copies a consistent snapshot, including committed
+    # transactions in the journal. Validate the model before creating output.
+    with closing(database(source, fields)) as original:
+        if original.execute("PRAGMA quick_check").fetchall()[0][0] != "ok":
+            raise ValueError("Source database failed integrity check")
+        if original.execute("PRAGMA foreign_key_check").fetchone() is not None:
+            raise ValueError("Source database has invalid relationships")
+        fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        os.close(fd)
+        try:
+            with closing(sqlite3.connect(destination, timeout=5)) as target:
+                original.backup(target)
+                if target.execute("PRAGMA integrity_check").fetchall() != [("ok",)]:
+                    raise ValueError("Backup integrity check failed")
+                if target.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                    raise ValueError("Backup relationship check failed")
+        except BaseException:
+            destination.unlink()
+            raise
+    return destination
+
+
 def handler(port, token, db_path):
     host = f"127.0.0.1:{port}"
     origin = "http://" + host
@@ -281,7 +311,16 @@ def handler(port, token, db_path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8766)
+    parser.add_argument("--backup", type=Path, help="Create a checked, new local SQLite snapshot and exit")
     args = parser.parse_args()
+    if args.backup is not None:
+        try:
+            config = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
+            saved = backup_database(ROOT / "workspace.sqlite3", args.backup, config.get("fields", []))
+            print(f"Backup created: {saved}. Keep a matching copy of config.json.")
+        except (ValueError, OSError, sqlite3.Error) as exc:
+            parser.error(str(exc))
+        return
     if not 1024 <= args.port <= 65535:
         parser.error("Choose a port from 1024 to 65535")
     with ThreadingHTTPServer(("127.0.0.1", args.port), handler(args.port, secrets.token_urlsafe(32), ROOT / "workspace.sqlite3")) as server:

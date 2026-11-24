@@ -104,6 +104,38 @@ class FullstackTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_fields([{"id": "bad-id", "label": "Bad", "type": "text"}], True)
 
+    def test_checked_backup_preserves_links_and_never_overwrites(self):
+        app = runpy.run_path(str(TEMPLATE / "server.py"))
+        fields = [{"id": "related", "label": "Related", "type": "link"}]
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            source, backup = root / "live.sqlite3", root / "backup.sqlite3"
+            change, listing = app["change_item"], app["list_items"]
+            change(source, {"action": "add", "title": "Parent", "notes": "", "details": {"related": None}}, fields)
+            parent = listing(source, fields=fields)[0]
+            change(source, {"action": "add", "title": "Child", "notes": "Snapshot", "details": {"related": parent["id"]}}, fields)
+            expected = listing(source, fields=fields)
+            self.assertEqual(app["backup_database"](source, backup, fields), backup)
+            original_bytes = backup.read_bytes()
+            with self.assertRaises(FileExistsError):
+                app["backup_database"](source, backup, fields)
+            self.assertEqual(backup.read_bytes(), original_bytes)
+            change(source, {"action": "delete", "id": parent["id"]}, fields)
+            self.assertEqual(listing(backup, fields=fields), expected)
+            self.assertIsNone(listing(source, fields=fields)[0]["details"]["related"])
+            with self.assertRaises(ValueError):
+                app["backup_database"](source, root / "wrong.sqlite3", MODELS["inventory"])
+            self.assertFalse((root / "wrong.sqlite3").exists())
+
+    def test_missing_database_backup_does_not_create_files(self):
+        app = runpy.run_path(str(TEMPLATE / "server.py"))
+        with tempfile.TemporaryDirectory() as tmp:
+            source, output = Path(tmp) / "missing.sqlite3", Path(tmp) / "backup.sqlite3"
+            with self.assertRaises(ValueError):
+                app["backup_database"](source, output)
+            self.assertFalse(source.exists())
+            self.assertFalse(output.exists())
+
 
 if __name__ == "__main__":
     unittest.main()

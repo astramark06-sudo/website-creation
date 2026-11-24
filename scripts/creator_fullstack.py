@@ -71,8 +71,8 @@ def export_fullstack(title, description, model="records", fields=None):
         archive.writestr(
             "README.md",
             "# Local workspace\n\nRun python server.py, then open the printed loopback address. "
-            "Python 3.10+ only. Data is saved in workspace.sqlite3. Back up the database while "
-            "the server is stopped. Local single-user prototype only: no public hosting, user "
+            "Python 3.10+ only. Data is saved in workspace.sqlite3. Stop the server, then run python server.py --backup snapshot.sqlite3. "
+            "Keep backups private. Local single-user prototype only: no public hosting, user "
             "accounts, or internet exposure. Keep config.json with its matching database.\n",
         )
         archive.writestr(".gitignore", "*.sqlite3\n*.sqlite3-*\n__pycache__/\n")

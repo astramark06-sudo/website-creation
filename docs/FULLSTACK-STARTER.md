@@ -25,3 +25,9 @@ Choose **Custom fields** in the studio and enter one field per line, such as `Qu
 For the CLI, create a JSON array of field definitions and pass `--model custom --schema schema.json`. The schema file is limited to 32 KiB. A database is permanently associated with the exact field schema stored when it is created; changing config.json later causes the server to reject the mismatch instead of silently reinterpreting data.
 
 Custom fields do not add accounts, network APIs, arbitrary SQL, executable expressions, uploads, secrets or public hosting. Use separate application architecture and review for those requirements.
+
+## Local backup and recovery
+
+From an extracted workspace, stop the local server, then run `python server.py --backup snapshot.sqlite3`. The command uses SQLite's consistent snapshot API, checks the configured model and database integrity, verifies foreign keys, and refuses to overwrite an existing file. Keep the matching config.json and generated application files with your backup. Backups contain all local records, so store them privately and do not commit them to GitHub.
+
+To recover, use a **new** folder with the same exported application and matching config.json. Copy your trusted backup into that folder as workspace.sqlite3, then start the local server and inspect the recovered records and links. Keep the original database and backup unchanged until recovery is confirmed. There is no destructive restore endpoint or automatic replacement of live data. Regression tests compare recovered records and links, check backup isolation after later edits and reject existing output paths or mismatched models.
