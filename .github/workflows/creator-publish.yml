@@ -19,8 +19,8 @@ concurrency:
 jobs:
   build:
     if: github.ref == 'refs/heads/main' && inputs.publish
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
@@ -34,6 +34,12 @@ jobs:
         run: python scripts/creator_project.py build --spec projects/publish.json --output build/publish --publish
       - name: Verify output against approved specification
         run: python scripts/creator_project.py verify --spec projects/publish.json --output build/publish --publish
+      - name: Install pinned browser test tool
+        run: python -m pip install "playwright==1.51.0"
+      - name: Install Chromium
+        run: python -m playwright install --with-deps chromium
+      - name: Check exact reviewed output in Chromium
+        run: python scripts/creator_browser.py --spec projects/publish.json --output build/publish --publish --report build/browser-report.json
       - uses: actions/upload-pages-artifact@v5
         with:
           path: build/publish

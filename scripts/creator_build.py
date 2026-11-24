@@ -98,7 +98,9 @@ nav a { text-decoration: underline; }
 main { padding-block: 3rem; }
 .hero { max-width: 48rem; margin-bottom: 3rem; }
 h1 { font-size: clamp(2rem, 5vw, 3.8rem); line-height: 1.12; letter-spacing: -.035em; overflow-wrap: anywhere; }
-h2 { line-height: 1.25; }
+h2 { line-height: 1.25; overflow-wrap: anywhere; }
+.nav strong, nav a { min-width: 0; overflow-wrap: anywhere; }
+nav { min-width: 0; }
 p { overflow-wrap: anywhere; }
 .eyebrow { color: var(--accent); font-weight: 700; }
 .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem; }
