@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "tables": [
+    {
+      "id": "categories",
+      "label": "Categories",
+      "fields": [
+        {
+          "id": "name",
+          "label": "Name",
+          "type": "text"
+        }
+      ]
+    },
+    {
+      "id": "items",
+      "label": "Items",
+      "fields": [
+        {
+          "id": "name",
+          "label": "Name",
+          "type": "text"
+        },
+        {
+          "id": "quantity",
+          "label": "Quantity",
+          "type": "integer"
+        },
+        {
+          "id": "state",
+          "label": "State",
+          "type": "choice",
+          "choices": [
+            "Available",
+            "Archived"
+          ]
+        },
+        {
+          "id": "category",
+          "label": "Category",
+          "type": "relation",
+          "target": "categories"
+        }
+      ]
+    }
+  ]
+}

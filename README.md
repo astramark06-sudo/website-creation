@@ -39,3 +39,5 @@ See the [local full-stack workspace starter](docs/FULLSTACK-STARTER.md) for SQLi
 Use the [release readiness guide](docs/RELEASE-READINESS.md) for project-specific build and optional browser reports before publishing. See the [original component library](docs/ORIGINAL-COMPONENTS.md) for supported section types.
 
 The [screenshot-informed design guide](docs/VISUAL-REFERENCE.md) explains the local visual analysis option and its limitations.
+
+See the [local relational data engine](docs/RELATIONAL-ENGINE.md) for the separate multi-table backend foundation. Browser integration is not yet included.
