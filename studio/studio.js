@@ -173,6 +173,28 @@ async function start(){
       }else{status('Structural report created. Existing draft unchanged.');}
       $('reference').value='';$('reference-authorized').checked=false;
     }));
+    $('vision-panel').hidden=!session.vision_enabled;
+    $('vision-analyze').addEventListener('click',()=>run(async()=>{
+      const file=$('visual-file').files[0];
+      if(!session.vision_enabled||!file||!$('visual-authorized').checked||!$('vision-consent').checked)
+        throw new Error('Select an authorized screenshot and confirm local model consent.');
+      const revision=draftRevision;
+      status('Preparing reduced screenshot for the local model…');
+      try{
+        const image=await window.prepareVisionReference(file);
+        if(revision!==draftRevision||$('visual-file').files[0]!==file||!$('visual-authorized').checked||!$('vision-consent').checked){
+          status('Screenshot, consent or draft changed. Run analysis again.');return;
+        }
+        const result=await(await request('/api/vision-reference',{image,title:project.title,objective:project.description,authorized:true})).json();
+        if(revision!==draftRevision||$('visual-file').files[0]!==file||!$('visual-authorized').checked||!$('vision-consent').checked){
+          status('Screenshot, consent or draft changed. Existing draft unchanged.');return;
+        }
+        $('visual-report').textContent=JSON.stringify({selection:result.selection,limitations:result.limitations},null,2);
+        if(confirm('Replace the current draft with the original preset-based proposal?')){
+          project=result.project;dirty();render();$('frame').srcdoc='';status('Local vision draft created. Review and replace starter content.');
+        }else status('Local vision report created. Existing draft unchanged.');
+      }finally{$('visual-file').value='';$('visual-authorized').checked=false;$('vision-consent').checked=false;}
+    }));
     $('visual-analyze').addEventListener('click',()=>run(async()=>{
       const file=$('visual-file').files[0];
       if(!file||!$('visual-authorized').checked)throw new Error('Select an authorized screenshot and confirm permission.');
