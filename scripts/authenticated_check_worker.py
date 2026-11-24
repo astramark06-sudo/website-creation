@@ -117,7 +117,9 @@ def check(engine):
                 page.set_default_timeout(5000)
                 page.set_default_navigation_timeout(8000)
                 page.on("pageerror", lambda error: page_errors.append("browser error"))
-                page.goto(url + "/login/")
+                response = page.goto(url + "/login/")
+                if response.headers.get("referrer-policy") != "same-origin":
+                    raise AuditFailure("Same-origin form provenance policy missing")
                 page.locator("#id_username").fill(users[role].username)
                 page.locator("#id_password").fill(passwords[role])
                 with page.expect_response(lambda response: response.request.method == "POST" and urlsplit(response.url).path == "/login/") as submitted:
