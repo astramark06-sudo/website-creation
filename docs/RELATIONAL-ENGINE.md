@@ -26,10 +26,14 @@ In Studio open Multi-table relational application, load the example schema or ed
 python scripts/creator_relational_export.py --title Inventory --description 'Local inventory' --schema projects/relational-example.json --output relational.zip
 ```
 
-The server initializes a new database only if absent and verifies schema compatibility on restart. Its HTTP interface is local only, with exact host, origin and session-token checks, bounded JSON bodies, strict routes and no external resources. Existing exports remain separate. The visual designer and advanced JSON editor share the same validated schema. Data is limited to 1,000 records per table; production accounts, relational migrations and hosting are not supported. CI tests the exported application, including actual Studio export, cross-table relations and persistence across server restart. Verify current CI before claiming support.
+The server initializes a new database only if absent and verifies schema compatibility on restart. Its HTTP interface is local only, with exact host, origin and session-token checks, bounded JSON bodies, strict routes and no external resources. Existing exports remain separate. The visual designer and advanced JSON editor share the same validated schema. Data is limited to 1,000 records per table; production accounts and hosting are not supported. Additive offline schema migration is documented separately; destructive or in-place migrations are unsupported. CI tests the exported application, including actual Studio export, cross-table relations and persistence across server restart. Verify current CI before claiming support.
 
 ## No-code schema design
 
 In the relational Studio panel, start a new schema or load the example. Add tables and fields, edit their labels, select text, integer, choice or relation types, enter choice options one per line, and select the related table. IDs are generated automatically and remain stable while labels change. The designer prevents removing a referenced table until its inbound relationships have been removed or redirected. The limits remain 2–4 tables and 1–8 fields per table. The advanced JSON panel exposes the same schema; editing JSON temporarily hides the visual editor until the local server validates and applies it. A schema download is validated by the same backend and contains no records. Existing database schema compatibility rules still apply. No schema migration or public hosting is performed by this designer.
 
 Design source: original Studio controls and existing design tokens. No third-party UI libraries, paid APIs or new runtime dependencies. Keyboard-operable native form controls and server validation are the acceptance criteria; the browser regression suite exercises all three configured engines. CI must pass before claiming verified support.
+
+## Schema evolution
+
+Use the [additive relational migration guide](RELATIONAL-MIGRATIONS.md) to migrate into a separate exported workspace. Existing tables and field definitions must remain unchanged; new fields require explicit defaults and newly added tables start empty. CI verification of this feature is required before use.
