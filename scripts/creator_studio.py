@@ -162,7 +162,15 @@ def make_handler(port, token, ai_model=None, browser_checks=False, vision_model=
                         raise ValueError("Browser check consent required")
                     self.send_json(200, check_browser(draft_spec(payload["spec"]), engine=payload.get("engine", "chromium")))
                 elif self.path == "/api/release-report":
-                    self.send_json(200, release_report(draft_spec(payload["spec"])))
+                    if set(payload) == {"spec"}:
+                        self.send_json(200, release_report(draft_spec(payload["spec"])))
+                    else:
+                        if not browser_checks:
+                            self.send_json(403, {"error": "Browser checks are not enabled"})
+                            return
+                        if set(payload) != {"spec", "engines", "confirmed"} or payload.get("confirmed") is not True or not isinstance(payload["engines"], list) or not payload["engines"]:
+                            raise ValueError("Combined release check consent and browser selection required")
+                        self.send_json(200, release_report(draft_spec(payload["spec"]), engines=payload["engines"]))
                 elif self.path == "/api/tool-overview":
                     self.send_json(200, overview(port))
                 elif self.path == "/api/tool-query":
