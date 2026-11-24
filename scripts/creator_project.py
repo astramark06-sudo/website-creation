@@ -14,9 +14,11 @@ import re
 try:
     from .creator_build import CSS, JS, THEMES, inspect_html
     from .creator_design import design_for, design_css
+    from .creator_components import validate_component, render_component, component_css
 except ImportError:
     from creator_build import CSS, JS, THEMES, inspect_html
     from creator_design import design_for, design_css
+    from creator_components import validate_component, render_component, component_css
 
 MAX_SPEC = 128 * 1024
 SLUG = re.compile(r"[a-z][a-z0-9-]{0,47}\Z")
@@ -78,7 +80,7 @@ def validate_spec(spec, publish=False):
         if not isinstance(sections, list) or not 1 <= len(sections) <= 12:
             raise ValueError("Use 1 to 12 sections on each page")
         for section in sections:
-            exact_keys(section, {"heading", "body"}, "section")
+            validate_component(section)
             require_text(section["heading"], "Section heading", 120)
             require_text(section["body"], "Section body", 4000)
     if pages[0]["slug"] != "home":
@@ -106,8 +108,7 @@ def render_page(spec, page):
         current = ' aria-current="page"' if item["slug"] == page["slug"] else ""
         nav_items.append(f'<a href="{filename(item)}"{current}>{e(item["title"])}</a>')
     nav = "".join(nav_items)
-    cards = "".join(f'<article class="card"><h2>{e(s["heading"])}</h2><p>{e(s["body"])}</p></article>'
-                    for s in page["sections"])
+    cards = "".join(render_component(section) for section in page["sections"])
     tasks = page["interaction"] == "tasks"
     script = '<script src="app.js" defer></script>' if tasks else ""
     return f"""<!doctype html>
@@ -132,7 +133,7 @@ def digest(data):
 def assemble(spec):
     validate_spec(spec)
     files = {filename(page): render_page(spec, page) for page in spec["pages"]}
-    files["style.css"] = CSS.replace("ACCENT", THEMES[spec["theme"]]) + design_css(spec)
+    files["style.css"] = CSS.replace("ACCENT", THEMES[spec["theme"]]) + design_css(spec) + component_css(spec)
     if any(p["interaction"] == "tasks" for p in spec["pages"]):
         files["app.js"] = JS
     files[".nojekyll"] = ""
