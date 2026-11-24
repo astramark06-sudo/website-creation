@@ -18,6 +18,7 @@ try:
     from .creator_fullstack import export_fullstack
     from .creator_tools import overview, query_tool, propose_plan
     from .creator_release import release_report
+    from .creator_browser import check_browser
 except ImportError:
     from creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec
     from creator_reference import reference_plan
@@ -25,6 +26,7 @@ except ImportError:
     from creator_fullstack import export_fullstack
     from creator_tools import overview, query_tool, propose_plan
     from creator_release import release_report
+    from creator_browser import check_browser
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "studio"
@@ -61,7 +63,7 @@ def export_zip(spec):
         return result.getvalue()
 
 
-def make_handler(port, token, ai_model=None):
+def make_handler(port, token, ai_model=None, browser_checks=False):
     host = f"127.0.0.1:{port}"
     origin = "http://" + host
 
@@ -102,7 +104,7 @@ def make_handler(port, token, ai_model=None):
                       "/studio.css": ("studio.css", "text/css; charset=utf-8"),
                       "/studio.js": ("studio.js", "text/javascript; charset=utf-8")}
             if self.path == "/api/session":
-                self.send_json(200, {"token": token, "project": read_spec(ROOT / "projects" / "example.json"), "ai_enabled": ai_model is not None})
+                self.send_json(200, {"token": token, "project": read_spec(ROOT / "projects" / "example.json"), "ai_enabled": ai_model is not None, "browser_checks_enabled": browser_checks})
             elif self.path in routes:
                 name, mime = routes[self.path]
                 self.send_data(200, (UI / name).read_bytes(), mime)
@@ -115,7 +117,7 @@ def make_handler(port, token, ai_model=None):
             if self.headers.get("Origin") != origin or not secrets.compare_digest(self.headers.get("X-Creator-Token", ""), token):
                 self.send_json(403, {"error": "Local session required"})
                 return
-            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report"):
+            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check"):
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
@@ -132,6 +134,13 @@ def make_handler(port, token, ai_model=None):
                     if payload.get("confirmed") is not True:
                         raise ValueError("Local AI consent required")
                     self.send_json(200, {"project": generate_draft(payload["prompt"], ai_model)})
+                elif self.path == "/api/browser-check":
+                    if not browser_checks:
+                        self.send_json(403, {"error": "Browser checks are not enabled"})
+                        return
+                    if payload.get("confirmed") is not True:
+                        raise ValueError("Browser check consent required")
+                    self.send_json(200, check_browser(draft_spec(payload["spec"])))
                 elif self.path == "/api/release-report":
                     self.send_json(200, release_report(draft_spec(payload["spec"])))
                 elif self.path == "/api/tool-overview":
@@ -160,12 +169,13 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--local-model", help="Opt in to an already installed offline Ollama model")
+    parser.add_argument("--browser-checks", action="store_true", help="Enable optional installed Chromium testing")
     args = parser.parse_args()
     if args.local_model and not valid_model(args.local_model):
         parser.error("Use a local model name, not a cloud model")
     if not 1024 <= args.port <= 65535:
         parser.error("Choose a port from 1024 to 65535")
-    with ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(args.port, secrets.token_urlsafe(32), args.local_model)) as server:
+    with ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(args.port, secrets.token_urlsafe(32), args.local_model, args.browser_checks)) as server:
         print(f"Master Creator: http://127.0.0.1:{args.port} (local only)")
         try:
             server.serve_forever()

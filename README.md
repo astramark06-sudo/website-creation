@@ -35,3 +35,5 @@ The repository contains the Master Creator toolkit and a local graphical studio.
 Use the [offline creator planner and source catalogue](docs/MASTER-CREATOR.md) to select a zero-spend development profile and discover permitted public resources. The catalogue contains references, not copied third-party components, and the planner makes no network calls or installations.
 
 See the [local full-stack workspace starter](docs/FULLSTACK-STARTER.md) for SQLite-backed application export. It is local-only, not a public server deployment. See the [UTCP integration](docs/UTCP-INTEGRATION.md) for opt-in read-only tool discovery.
+
+Use the [release readiness guide](docs/RELEASE-READINESS.md) for project-specific build and optional browser reports before publishing. See the [original component library](docs/ORIGINAL-COMPONENTS.md) for supported section types.
