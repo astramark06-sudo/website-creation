@@ -1,0 +1,13 @@
+{
+  "manual_call_templates": [
+    {
+      "name": "master_creator",
+      "call_template_type": "http",
+      "url": "http://127.0.0.1:8767/utcp",
+      "http_method": "GET",
+      "allowed_communication_protocols": [
+        "http"
+      ]
+    }
+  ]
+}
