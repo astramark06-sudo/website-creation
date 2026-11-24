@@ -23,7 +23,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install pinned browser test tool
-        run: python -m pip install "playwright==1.51.0"
+        run: python -m pip install "playwright==1.51.0" -r staging_auth/requirements.txt
       - name: Install Chromium
         run: python -m playwright install --with-deps chromium
       - name: Verify real browser behavior
@@ -51,7 +51,7 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install pinned browser test tool
-        run: python -m pip install "playwright==1.51.0"
+        run: python -m pip install "playwright==1.51.0" -r staging_auth/requirements.txt
       - name: Install selected browser
         env:
           ENGINE: ${{ matrix.engine }}
