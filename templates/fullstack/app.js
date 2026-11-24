@@ -44,9 +44,36 @@ function detailsForSave(){
   return values;
 }
 function button(parent,text,fn){const b=document.createElement('button');b.type='button';b.textContent=text;b.addEventListener('click',fn);parent.append(b);}
+function metricPair(parent,label,value){
+  const pair=document.createElement('div'),dt=document.createElement('dt'),dd=document.createElement('dd');
+  dt.textContent=label;dd.textContent=String(value);pair.append(dt,dd);parent.append(pair);
+}
+function renderAnalytics(summary){
+  const counts=$('analytics-counts');counts.replaceChildren();
+  metricPair(counts,'Matching records',summary.total);
+  metricPair(counts,'Open records',summary.open);
+  metricPair(counts,'Completed records',summary.completed);
+  const percent=summary.completion_percent,meter=$('completion-meter');
+  meter.hidden=percent===null;meter.value=percent===null?0:percent;
+  $('completion-caption').textContent=percent===null?'No matching records to summarize.':percent+'% completed.';
+  const host=$('analytics-fields');host.replaceChildren();
+  for(const field of summary.fields){
+    const group=document.createElement('div'),heading=document.createElement('h4'),dl=document.createElement('dl');
+    group.className='analytics-field';heading.textContent=field.label;dl.className='analytics-grid';
+    if(field.type==='integer'){
+      metricPair(dl,'Total',field.total);metricPair(dl,'Average',field.average===null?'Not applicable':field.average);
+    }else if(field.type==='choice'){
+      for(const choice of field.choices)metricPair(dl,choice.label,choice.count);
+    }else if(field.type==='link'){
+      metricPair(dl,'Linked records',field.linked);metricPair(dl,'Without link',summary.total-field.linked);
+    }
+    group.append(heading,dl);host.append(group);
+  }
+  $('analytics').hidden=false;
+}
 async function refresh(){
   const q=new URLSearchParams({q:$('search').value,state:$('filter').value});
-  const data=await api('/api/items?'+q);$('items').replaceChildren();linkOptions=data.link_options||[];populateLinks(editId);
+  const data=await api('/api/items?'+q);renderAnalytics(data.summary);$('items').replaceChildren();linkOptions=data.link_options||[];populateLinks(editId);
   for(const item of data.items){
     const li=document.createElement('li'),h=document.createElement('h3'),p=document.createElement('p');
     h.textContent=item.title;p.textContent=item.notes;if(item.done)h.className='completed';li.append(h,p);

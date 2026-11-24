@@ -136,6 +136,45 @@ class FullstackTests(unittest.TestCase):
             self.assertFalse(source.exists())
             self.assertFalse(output.exists())
 
+    def test_filtered_summary_all_field_types(self):
+        app = runpy.run_path(str(TEMPLATE / "server.py"))
+        fields = [
+            {"id": "qty", "label": "Quantity", "type": "integer"},
+            {"id": "category", "label": "Category", "type": "choice", "choices": ["A", "B", "C"]},
+            {"id": "related", "label": "Related", "type": "link"},
+            {"id": "note", "label": "Note", "type": "text"},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "data.sqlite3"
+            change, listing, summarize = app["change_item"], app["list_items"], app["summarize_items"]
+            change(path, {"action": "add", "title": "First", "notes": "",
+                          "details": {"qty": 4, "category": "A", "related": None, "note": "private sample"}}, fields)
+            first = listing(path, fields=fields)[0]["id"]
+            change(path, {"action": "add", "title": "Second", "notes": "",
+                          "details": {"qty": 9, "category": "B", "related": first, "note": ""}}, fields)
+            change(path, {"action": "toggle", "id": first}, fields)
+            summary = summarize(listing(path, fields=fields), fields)
+            self.assertEqual((summary["total"], summary["completed"], summary["open"]), (2, 1, 1))
+            self.assertEqual(summary["completion_percent"], 50)
+            metrics = {field["id"]: field for field in summary["fields"]}
+            self.assertEqual(metrics["qty"]["total"], 13)
+            self.assertEqual(metrics["qty"]["average"], 6.5)
+            self.assertEqual([c["count"] for c in metrics["category"]["choices"]], [1, 1, 0])
+            self.assertEqual(metrics["related"]["linked"], 1)
+            self.assertNotIn("note", metrics)
+            filtered = summarize(listing(path, state="done", fields=fields), fields)
+            self.assertEqual(filtered["completion_percent"], 100)
+            self.assertEqual(filtered["fields"][0]["total"], 4)
+            empty = summarize(listing(path, "missing", fields=fields), fields)
+            self.assertIsNone(empty["completion_percent"])
+            self.assertIsNone(empty["fields"][0]["average"])
+            self.assertEqual(empty["fields"][0]["total"], 0)
+
+    def test_general_record_summary(self):
+        app = runpy.run_path(str(TEMPLATE / "server.py"))
+        self.assertEqual(app["summarize_items"]([]), {"total": 0, "completed": 0, "open": 0,
+                                                    "completion_percent": None, "fields": []})
+
 
 if __name__ == "__main__":
     unittest.main()

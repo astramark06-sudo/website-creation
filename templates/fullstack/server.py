@@ -151,6 +151,31 @@ def list_items(path, query="", state="all", fields=None):
         return result
 
 
+def summarize_items(items, fields=None):
+    """Describe the same filtered, bounded records returned to the workspace."""
+    fields = validate_fields([] if fields is None else fields)
+    total = len(items)
+    completed = sum(item["done"] == 1 for item in items)
+    metrics = []
+    for field in fields:
+        name, kind = field["id"], field["type"]
+        values = [item["details"][name] for item in items]
+        metric = {"id": name, "label": field["label"], "type": kind}
+        if kind == "integer":
+            metric.update(total=sum(values), average=round(sum(values) / total, 2) if total else None)
+        elif kind == "choice":
+            metric["choices"] = [{"label": choice, "count": values.count(choice)}
+                                 for choice in field["choices"]]
+        elif kind == "link":
+            metric.update(linked=sum(value is not None for value in values))
+        else:
+            continue
+        metrics.append(metric)
+    return {"total": total, "completed": completed, "open": total - completed,
+            "completion_percent": round(100 * completed / total, 1) if total else None,
+            "fields": metrics}
+
+
 def change_item(path, payload, fields=None):
     fields = validate_fields([] if fields is None else fields)
     if not isinstance(payload, dict):
@@ -281,8 +306,10 @@ def handler(port, token, db_path):
                         self.reply(403, {"error": "Invalid session"})
                         return
                     params = parse_qs(parsed.query, max_num_fields=4)
+                    items = list_items(db_path, params.get("q", [""])[0], params.get("state", ["all"])[0], fields)
                     self.reply(200, {
-                        "items": list_items(db_path, params.get("q", [""])[0], params.get("state", ["all"])[0], fields),
+                        "items": items,
+                        "summary": summarize_items(items, fields),
                         "link_options": link_options(db_path, fields) if any(f["type"] == "link" for f in fields) else [],
                     })
                 else:

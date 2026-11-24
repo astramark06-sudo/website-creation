@@ -6,5 +6,15 @@
 <form id="editor"><label>Title<input id="name" required maxlength="160"></label><label>Notes<textarea id="notes" maxlength="2000" rows="3"></textarea></label><div id="model-fields"></div><button id="submit">Add record</button><button type="button" id="cancel">Clear</button></form></section>
 <section aria-labelledby="items-heading"><h2 id="items-heading">Records</h2>
 <form id="filters"><label>Search<input id="search" maxlength="200"></label><label>Status<select id="filter"><option value="all">All</option><option value="open">Open</option><option value="done">Completed</option></select></label><button>Apply filters</button></form>
-<p id="status" role="status" aria-live="polite"></p><ul id="items"></ul></section>
+<p id="status" role="status" aria-live="polite"></p>
+<div id="analytics" aria-labelledby="analytics-heading" hidden>
+<h3 id="analytics-heading">Matching records summary</h3>
+<p>These figures describe the current search and status filter, not necessarily the entire database.</p>
+<dl id="analytics-counts" class="analytics-grid"></dl>
+<label for="completion-meter">Completion of matching records</label>
+<progress id="completion-meter" value="0" max="100"></progress>
+<p id="completion-caption"></p>
+<div id="analytics-fields"></div>
+</div>
+<ul id="items"></ul></section>
 <p>Data is saved in a local SQLite database. Do not enter sensitive information or expose this server publicly.</p></main></body></html>
