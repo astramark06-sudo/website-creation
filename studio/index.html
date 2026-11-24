@@ -27,6 +27,18 @@
 <label>Website requirements<textarea id="ai-prompt" rows="5" maxlength="4000"></textarea></label>
 <button id="ai-draft" type="button">Generate draft with local AI</button>
 </section>
+<details id="tool-center">
+<summary>Tool and resource center</summary>
+<p>Discover development profiles and permitted component sources from the same catalogue used by UTCP. No external tool is installed or invoked automatically.</p>
+<p id="tool-counts" aria-live="polite">Open to load catalogue.</p>
+<label>Development profile<select id="tool-profile"></select></label>
+<button type="button" id="tool-plan">Propose development plan</button>
+<label>Search component sources<input id="source-query" maxlength="160" placeholder="e.g. templates"></label>
+<label>Import policy<select id="source-policy"><option value="">All policies</option></select></label>
+<button id="source-search" type="button">Search sources</button>
+<p id="tool-status" role="status" aria-live="polite"></p>
+<div id="tool-results" class="tool-results"></div>
+</details>
 <h2>Reference analysis</h2>
 <p>Use an authorized saved HTML file for structural hints. The source is not executed, copied into the draft or retained.</p>
 <label>Local HTML reference<input id="reference" type="file" accept=".html,.htm,text/html"></label>

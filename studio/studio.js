@@ -60,11 +60,59 @@ async function run(fn){
   if(busy)return;busy=true;$('preview').disabled=true;$('export').disabled=true;
   try{await fn();}catch(e){status(e.message||'Request failed.');}finally{busy=false;$('preview').disabled=false;$('export').disabled=false;}
 }
+function showToolResults(heading, value){
+  const host=$('tool-results');host.replaceChildren();
+  const h=document.createElement('h3');h.textContent=heading;host.append(h);
+  const pre=document.createElement('pre');pre.textContent=JSON.stringify(value,null,2);host.append(pre);
+}
+function showSources(sources){
+  const host=$('tool-results');host.replaceChildren();
+  for(const source of sources){
+    const card=document.createElement('article');card.className='section-card';
+    const h=document.createElement('h3');h.textContent=source.name;card.append(h);
+    const p=document.createElement('p');p.textContent=source.import_policy+' · '+source.notes;card.append(p);
+    const u=new URL(source.url);
+    if(u.protocol==='https:'&&!u.username&&!u.password){
+      const link=document.createElement('a');link.href=u.href;link.target='_blank';link.rel='noopener noreferrer';link.textContent='Open original resource';card.append(link);
+    }
+    host.append(card);
+  }
+}
+function initToolCenter(){
+  let loaded=false, loading=false;
+  const toolStatus=message=>{$('tool-status').textContent=message;};
+  const execute=async fn=>{
+    if(loading)return;loading=true;
+    $('source-search').disabled=true;$('tool-plan').disabled=true;
+    try{await fn();}catch(e){toolStatus(e.message||'Tool request failed.');}
+    finally{loading=false;$('source-search').disabled=false;$('tool-plan').disabled=false;}
+  };
+  $('tool-center').addEventListener('toggle',()=>{
+    if(!$('tool-center').open||loaded)return;
+    execute(async()=>{
+      const result=await(await request('/api/tool-overview',{})).json();
+      $('tool-counts').textContent=result.counts.registered_tools+' registered tools · '+result.counts.sources+' sources · '+result.counts.profiles+' profiles. Catalogue entries are not active connections.';
+      for(const profile of result.profiles){const o=document.createElement('option');o.value=profile.id;o.textContent=profile.id+' ('+profile.framework+')';$('tool-profile').append(o);}
+      for(const policy of result.import_policies){const o=document.createElement('option');o.value=policy;o.textContent=policy;$('source-policy').append(o);}
+      loaded=true;toolStatus('Read-only catalogue ready.');
+    });
+  });
+  $('tool-plan').addEventListener('click',()=>execute(async()=>{
+    const result=await(await request('/api/tool-plan',{profile:$('tool-profile').value,objective:project.description})).json();
+    showToolResults('Proposed stack (not installed)',result);
+    toolStatus('Development plan prepared. No tools installed.');
+  }));
+  $('source-search').addEventListener('click',()=>execute(async()=>{
+    const args={query:$('source-query').value.trim()};if($('source-policy').value)args.import_policy=$('source-policy').value;
+    const result=await(await request('/api/tool-query',{tool:'search_sources',arguments:args})).json();
+    showSources(result.sources);toolStatus(result.sources.length+' matching sources. Review individual terms and licenses.');
+  }));
+}
 async function start(){
   try{
     const response=await fetch('/api/session');
     if(!response.ok)throw new Error('Session unavailable.');
-    const session=await response.json();token=session.token;project=session.project;render();
+    const session=await response.json();token=session.token;project=session.project;render();initToolCenter();
     $('ai-panel').hidden=!session.ai_enabled;
     $('ai-draft').addEventListener('click',()=>run(async()=>{
       const prompt=$('ai-prompt').value.trim();if(!prompt)throw new Error('Describe your website first.');
