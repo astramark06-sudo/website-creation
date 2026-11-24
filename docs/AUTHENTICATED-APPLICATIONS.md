@@ -1,6 +1,6 @@
 # Authenticated application profile: architecture contract
 
-Status: authorization policy foundation only. No authentication provider, login form, session implementation, protected HTTP routes, or production deployment is enabled. Existing local-only exports retain their current behavior. A loopback workspace token is not a user identity and must never be treated as one.
+Status: separate local Django staging profile with built-in login, sessions, workspace memberships and scoped data API. Production deployment remains disabled. Existing local-only exports retain their current behavior. A loopback workspace token is not a user identity and must never be treated as one.
 
 ## Scope and decisions
 
@@ -19,7 +19,7 @@ Deletion is owner-only because it can clear references in other tables. Owner-on
 
 ## Tool choice and cost
 
-Reuse the existing Python standard library for the pure authorization policy and tests. The GitHub connector can edit repository files and read CI; no new identity service or specialist design tool has been connected. No external component is copied. The existing ecosystem catalogue lists Supabase and Appwrite as candidates for integrated authentication and storage; both are deferred pending a real deployment environment, license/version review, storage ownership and explicit cost controls. An open-source identity provider still requires a host. Prefer a maintained framework or identity provider for actual authentication and session security rather than building a password protocol in this repository. No paid service is selected or provisioned.
+Reuse the existing Python standard library for the pure authorization policy and tests. The GitHub connector can edit repository files and read CI; no new identity service or specialist design tool has been connected. No external component is copied. The existing ecosystem catalogue lists Supabase and Appwrite as candidates for integrated authentication and storage; both are deferred pending a real deployment environment, license/version review, storage ownership and explicit cost controls. An open-source identity provider still requires a host. Prefer a maintained framework or identity provider for actual authentication and session security rather than building a password protocol in this repository. No paid service is selected or provisioned. Django 5.2.19 LTS is pinned for this optional local profile; see the [official release support table](https://www.djangoproject.com/download/).
 
 ## Required integration gates
 
@@ -40,6 +40,31 @@ Role or membership changes must be coordinated transactionally with protected wr
 
 ## Current implementation
 
-The pure policy module scripts/creator_access.py defines the exact action set, roles, principal contract and deny-by-default decision. Unit tests enumerate every role/action pair and test inactive, cross-workspace, malformed and anonymous requests. This is not a working login system. The local app is not changed by importing or adding this module. No credentials, secrets, accounts, external URLs or deployment operations are added.
+The pure policy module scripts/creator_access.py defines the exact action set, roles, principal contract and deny-by-default decision. Unit tests enumerate every role/action pair and test inactive, cross-workspace, malformed and anonymous requests. The policy is also integrated into the separate staging profile described below. Existing local exports do not import it. No real accounts, credentials or deployment operations have been created.
 
-Next stage: choose an actual maintained authentication framework/provider and persistence strategy for an explicitly scoped local staging environment; integrate and verify its session and membership adapters before exposing any network service. Do not publish the current local HTTP servers.
+Do not publish the current local HTTP servers.
+
+
+## Optional Django staging profile
+
+The separate staging_auth package uses Django's built-in account and session system, password validators, CSRF middleware, and SQLite. It exposes a minimal sign-in and workspace-list page plus a schema-aware JSON API. It is not a generated application export or a replacement for the existing physical-table relational engine. This prototype stores each workspace's schema and scoped JSON records using Django ORM models. Every protected operation rechecks current membership and active account status in one SQLite transaction using IMMEDIATE transaction mode. Related-record checks and deletion cleanup use the same workspace and table scope. The owner-only member endpoint prevents demoting or disabling the last active owner through that endpoint and records minimal membership-change events.
+
+Use a private local Python environment and install the optional requirements. Create a private .local-staging directory, set CREATOR_STAGING_SECRET to a locally generated random secret of at least 50 characters (do not commit or share it), then use Django's interactive createsuperuser command for a synthetic local test account. That framework superuser has no application access until membership is explicitly provisioned. No password or secret is passed in command-line arguments.
+
+```sh
+python -m pip install -r staging_auth/requirements.txt
+python -m django migrate --settings=staging_auth.settings
+python -m django createsuperuser --settings=staging_auth.settings
+python -m django provision_workspace --slug example --title Example --schema projects/relational-example.json --owner TEST_USERNAME --settings=staging_auth.settings
+python -m django runserver 127.0.0.1:8769 --noreload --settings=staging_auth.settings
+```
+
+The server is for loopback HTTP only. Use synthetic data. Cookie Secure flags are intentionally disabled for loopback HTTP; there is no production TLS configuration, login rate limiter, MFA, recovery, invitation service, graphical data editor, public deployment, or tenant-isolation certification. The last-owner protection applies only to the member endpoint, not out-of-band account/database administration. Sessions are provided by Django and have a 30-minute age; revocation by membership is checked on each protected operation. Do not expose this development server to the internet. Production needs a separate deployment review and actual session/revocation concurrency tests.
+
+Run the isolated integration suite without existing accounts or databases:
+
+```sh
+python -m django test staging_auth --settings=staging_auth.test_settings -v 2
+```
+
+The optional dedicated CI job installs Django, checks migration consistency and runs tests for real login/logout, CSRF, membership changes, cross-workspace record and relation isolation, role permissions, scoped exports, malformed inputs and local provisioning. The base generator retains its standard-library runtime. Transitive dependency locking and current vulnerability review are separate release gates. Check the exact commit's CI results.

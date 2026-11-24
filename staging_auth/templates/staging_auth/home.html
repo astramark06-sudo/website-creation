@@ -1,0 +1,8 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Authenticated staging workspace</title></head>
+<body><main><h1>Authenticated local staging</h1>
+{% if user.is_authenticated %}
+<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form>
+<h2>Your workspaces</h2><ul>{% for workspace in workspaces %}<li>{{ workspace.title }} — <a href="/api/workspaces/{{ workspace.slug }}/schema/">View schema</a></li>{% empty %}<li>No active memberships.</li>{% endfor %}</ul>
+{% else %}<p><a href="{% url 'login' %}">Sign in</a></p>{% endif %}
+<p>Local development only. The data editor and deployment configuration are not included.</p></main></body></html>

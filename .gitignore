@@ -12,3 +12,9 @@ coverage/
 strix_runs/
 .playwright/
 .DS_Store
+
+.local-staging/
+*.sqlite3
+*.sqlite3-*
+__pycache__/
+.venv/
