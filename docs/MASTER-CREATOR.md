@@ -74,3 +74,9 @@ Open localhost port 8000 to review the generated website. Confirm rights to all 
 To publish an approved project, commit its specification as `projects/publish.json` with all three review fields set to true. In GitHub repository settings enable Pages with GitHub Actions as the source. On main, manually dispatch the **Publish reviewed creator project** workflow and explicitly confirm publication. It runs the regression tests, generates and verifies the static output, then deploys through the GitHub Pages environment. It will fail if the specification is missing, unapproved or invalid. The public URL must be verified from the deployment result. No site is published by default; existing manual static-site deployment is unchanged.
 
 GitHub Pages supports static files and browser-side interactions, not private server code, login systems or shared databases. Full-stack apps, independently generated multi-user backends, visual editing and browser-rendered reference analysis require separate future modules and a suitable reviewed hosting profile. No paid service is introduced by this workflow.
+
+## Local graphical workspace
+
+Run `python scripts/creator_studio.py` from the repository root, then open the printed loopback address in your browser. Edit project details, add or remove pages and sections, select a theme, import and save draft JSON, preview at three viewport widths, and export a verified ZIP. Preview is deliberately non-interactive; test the exported site locally. Imported and exported projects remain unapproved drafts; publishing uses the separate reviewed GitHub Pages workflow.
+
+The studio binds only to IPv4 loopback, checks Host and Origin headers and requires a per-run request token. Do not forward its port or expose it publicly. Save the JSON or export before closing; the server does not retain drafts. Browser end-to-end and accessibility verification remain separate checks. No additional dependencies or paid services are required.
