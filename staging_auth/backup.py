@@ -33,9 +33,12 @@ def backup_staging(source, destination):
             with closing(sqlite3.connect(destination, timeout=5)) as copy:
                 original.backup(copy)
                 verify_snapshot(copy)
+                # Scrub session data from the snapshot's database pages as well as
+                # its logical rows. Rebuild to discard previously freed pages.
+                copy.execute("PRAGMA secure_delete = ON")
                 with copy:
-                    # Restored backups must never resurrect old authenticated sessions.
                     copy.execute("DELETE FROM django_session")
+                copy.execute("VACUUM")
                 verify_snapshot(copy)
                 if copy.execute("SELECT count(*) FROM django_session").fetchone()[0] != 0:
                     raise ValueError("Snapshot retained sessions")

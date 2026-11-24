@@ -71,6 +71,7 @@ class BackupTests(TransactionTestCase):
         client = Client()
         client.force_login(user)
         self.assertEqual(Session.objects.count(), 1)
+        session_key = Session.objects.get().session_key
         source = Path(connection.settings_dict["NAME"])
         with tempfile.TemporaryDirectory() as temp:
             target = Path(temp) / "backup.sqlite3"
@@ -84,6 +85,8 @@ class BackupTests(TransactionTestCase):
             self.assertEqual(Session.objects.count(), 1)
             self.assertEqual(Record.objects.count(), 1)
             before = target.read_bytes()
+            self.assertNotIn(session_key.encode("ascii"), before)
+            self.assertTrue(Session.objects.filter(session_key=session_key).exists())
             with self.assertRaises(CommandError):
                 call_command("backup_staging", output=target, stdout=out)
             self.assertEqual(target.read_bytes(), before)
