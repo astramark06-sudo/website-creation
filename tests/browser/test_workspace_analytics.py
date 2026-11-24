@@ -4,6 +4,8 @@ import io
 import runpy
 import tempfile
 import unittest
+
+from browser_engine import launch_browser
 import zipfile
 
 from playwright.sync_api import expect, sync_playwright
@@ -26,7 +28,7 @@ class WorkspaceAnalyticsTests(unittest.TestCase):
             for title, quantity in (("Pens", 5), ("Paper", 12)):
                 app["change_item"](db, {"action": "add", "title": title, "notes": "",
                                        "details": {"quantity": quantity, "location": "Shelf"}}, fields)
-            browser = pw.chromium.launch()
+            browser = launch_browser(pw)
             try:
                 page = browser.new_page(viewport={"width": 390, "height": 844})
                 with serve(lambda port: app["handler"](port, "analytics-test", db)) as url:

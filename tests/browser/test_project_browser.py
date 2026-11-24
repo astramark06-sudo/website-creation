@@ -3,6 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from browser_engine import browser_engine
+
 from scripts.creator_browser import check_browser
 from scripts.creator_project import build, read_spec
 
@@ -14,7 +16,7 @@ class ProjectBrowserTests(unittest.TestCase):
         spec = read_spec(ROOT / "projects" / "example.json")
         spec["pages"][0]["sections"][0]["kind"] = "faq"
         spec["pages"][0]["title"] = "LongTitle" * 10
-        report = check_browser(spec)
+        report = check_browser(spec, engine=browser_engine())
         self.assertEqual(report["status"], "passed", report["findings"])
         self.assertEqual(len(report["results"]), 6)
         self.assertEqual(report["viewports"], [360, 768, 1440])
@@ -34,12 +36,12 @@ class ProjectBrowserTests(unittest.TestCase):
             build(spec, output)
             (output / "index.html").write_text("tampered", encoding="utf-8")
             with self.assertRaises(ValueError):
-                check_browser(spec, output)
+                check_browser(spec, output, engine=browser_engine())
 
     def test_requires_publication_approval_when_requested(self):
         spec = read_spec(ROOT / "projects" / "example.json")
         with self.assertRaises(ValueError):
-            check_browser(spec, publish=True)
+            check_browser(spec, publish=True, engine=browser_engine())
 
 
 if __name__ == "__main__":

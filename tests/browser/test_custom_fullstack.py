@@ -4,6 +4,8 @@ import io
 import runpy
 import tempfile
 import unittest
+
+from browser_engine import launch_browser
 import zipfile
 
 from playwright.sync_api import expect, sync_playwright
@@ -24,7 +26,7 @@ class CustomModelBrowserTests(unittest.TestCase):
                 for name in archive.namelist():
                     (root / name).write_bytes(archive.read(name))
             app = runpy.run_path(str(root / "server.py"))
-            browser = pw.chromium.launch()
+            browser = launch_browser(pw)
             try:
                 page = browser.new_page()
                 with serve(lambda port: app["handler"](port, "custom-model-test", root / "workspace.sqlite3")) as url:

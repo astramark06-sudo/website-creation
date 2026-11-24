@@ -2,6 +2,8 @@
 import json
 import struct
 import unittest
+
+from browser_engine import launch_browser
 import zlib
 from playwright.sync_api import sync_playwright, expect
 from scripts.creator_studio import make_handler
@@ -20,7 +22,7 @@ def synthetic_png():
 class VisualBrowserTests(unittest.TestCase):
     def test_screenshot_stays_local(self):
         with sync_playwright() as pw, serve(lambda port: make_handler(port, "visual-test")) as url:
-            browser = pw.chromium.launch()
+            browser = launch_browser(pw)
             try:
                 page = browser.new_page()
                 page.goto(url)

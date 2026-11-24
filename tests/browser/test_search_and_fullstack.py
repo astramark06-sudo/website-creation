@@ -3,6 +3,8 @@ from pathlib import Path
 import runpy
 import tempfile
 import unittest
+
+from browser_engine import launch_browser, browser_engine
 import zipfile
 
 from playwright.sync_api import expect, sync_playwright
@@ -19,14 +21,14 @@ class ApplicationBrowserTests(unittest.TestCase):
     def test_project_search_audit(self):
         spec = read_spec(ROOT / "projects" / "example.json")
         spec["pages"][0]["interaction"] = "search"
-        report = check_browser(spec)
+        report = check_browser(spec, engine=browser_engine())
         self.assertEqual(report["status"], "passed", report["results"])
         self.assertEqual(sum(r["checks"].get("search_reset", False)
                              for r in report["results"]), 3)
 
     def test_exported_database_workspace(self):
         with tempfile.TemporaryDirectory() as tmp, sync_playwright() as pw:
-            browser = pw.chromium.launch()
+            browser = launch_browser(pw)
             context = browser.new_context(accept_downloads=True)
             try:
                 page = context.new_page()

@@ -1,5 +1,7 @@
 """Project-specific release report and stale report invalidation."""
 import unittest
+
+from browser_engine import launch_browser
 from playwright.sync_api import expect, sync_playwright
 from scripts.creator_studio import make_handler
 from test_studio import serve
@@ -8,7 +10,7 @@ from test_studio import serve
 class ReleaseBrowserTests(unittest.TestCase):
     def test_report_is_invalidated_by_edit(self):
         with sync_playwright() as pw, serve(lambda port: make_handler(port, "release-test")) as url:
-            browser = pw.chromium.launch()
+            browser = launch_browser(pw)
             try:
                 page = browser.new_page()
                 page.goto(url)
