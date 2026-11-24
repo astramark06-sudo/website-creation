@@ -95,6 +95,7 @@ async function start(){
     $('viewport').addEventListener('change',()=>$('frame').style.width=$('viewport').value);
     $('preview').addEventListener('click',()=>run(async()=>{status('Generating preview…');const r=await request('/api/preview',{spec:project,slug:$('preview-page').value});$('frame').srcdoc=(await r.json()).html;status('Preview generated. Test interactions after export.');}));
     $('export').addEventListener('click',()=>run(async()=>{status('Building draft…');const r=await request('/api/export',{spec:project});download(await r.blob(),'creator-project.zip');status('Verified draft exported. Nothing published.');}));
+    $('fullstack-export').addEventListener('click',()=>run(async()=>{status('Building local database app…');const r=await request('/api/fullstack-export',{title:project.title,description:project.description});download(await r.blob(),'local-data-workspace.zip');status('Local database app exported. Run server.py in the extracted folder.');}));
     status('Ready.');$('preview').click();
   }catch(e){status('Unable to load studio: '+e.message);}
 }
