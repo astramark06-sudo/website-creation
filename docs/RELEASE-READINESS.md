@@ -10,6 +10,8 @@ CLI usage:
 python scripts/creator_release.py --spec projects/example.json
 ```
 
+For one combined JSON evidence report, use `python scripts/creator_release.py --spec projects/example.json --engine chromium --engine firefox --engine webkit --report release-evidence.json` after installing the optional browser tools and each selected engine. Omit unwanted engines; the default still performs build checks only. The command runs fresh checks against the same verified temporary output, matches project and file fingerprints, and checks coverage of every page at each supported width. A failed browser check is retained in the report and returns a nonzero exit status. Existing report files are never overwritten. Even a passing combined report does not approve publication or establish full accessibility, security or performance.
+
 Use the report alongside real project-specific browser, accessibility and deployment checks. Generic repository CI is not evidence that an arbitrary generated project has passed those checks.
 
 ## Optional project-specific browser evidence
