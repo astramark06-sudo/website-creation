@@ -162,16 +162,24 @@ async function start(){
       project=candidate;dirty();render();$('frame').srcdoc='';status('Imported as an unapproved draft.');
     }catch(e){status(e.message);}finally{$('import').value='';}});
     $('analyze-reference').addEventListener('click',()=>run(async()=>{
-      const file=$('reference').files[0];
-      if(!file || !$('reference-authorized').checked)throw new Error('Select an authorized local HTML file and confirm permission.');
-      if(file.size>65536)throw new Error('Reference exceeds 64 KiB.');
-      const response=await request('/api/reference',{source:await file.text(),title:project.title,objective:project.description,authorized:true});
-      const result=await response.json();
-      $('reference-report').textContent=JSON.stringify({observations:result.observations,suggestions:result.suggestions,limitations:result.limitations},null,2);
-      if(confirm('Replace your current project with the independently authored starter draft?')){
-        project=result.project;dirty();render();$('frame').srcdoc='';status('Original reference-informed draft created. Review and customize its content.');
-      }else{status('Structural report created. Existing draft unchanged.');}
-      $('reference').value='';$('reference-authorized').checked=false;
+      const files=Array.from($('reference').files);
+      if(!files.length||files.length>5||!$('reference-authorized').checked)throw new Error('Select one to five authorized local HTML files and confirm permission.');
+      if(files.reduce((total,file)=>total+file.size,0)>65536)throw new Error('Combined references exceed 64 KiB.');
+      const revision=draftRevision;
+      const sameFiles=()=>files.length===$('reference').files.length&&files.every((file,index)=>file===$('reference').files[index]);
+      const current=()=>revision===draftRevision&&sameFiles()&&$('reference-authorized').checked;
+      try{
+        const sources=await Promise.all(files.map(file=>file.text()));
+        if(!current()){status('Reference, permission or draft changed. Run analysis again.');return;}
+        const payload={title:project.title,objective:project.description,authorized:true};
+        if(sources.length===1)payload.source=sources[0];else payload.sources=sources;
+        const result=await(await request('/api/reference',payload)).json();
+        if(!current()){status('Reference, permission or draft changed. Existing draft unchanged.');return;}
+        $('reference-report').textContent=JSON.stringify({observations:result.observations,suggestions:result.suggestions,limitations:result.limitations},null,2);
+        if(confirm('Replace your current project with the independently authored starter draft?')){
+          project=result.project;dirty();render();$('frame').srcdoc='';status('Original reference-informed draft created. Review and customize its content.');
+        }else{status('Structural report created. Existing draft unchanged.');}
+      }finally{if(sameFiles()){$('reference').value='';$('reference-authorized').checked=false;}}
     }));
     $('vision-panel').hidden=!session.vision_enabled;
     $('vision-analyze').addEventListener('click',()=>run(async()=>{
