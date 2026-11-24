@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "title": "Example project",
+  "description": "A fictional example of the original website builder.",
+  "theme": "teal",
+  "pages": [
+    {
+      "slug": "home",
+      "title": "Home",
+      "intro": "A small example site with independent content and a responsive layout.",
+      "sections": [
+        {
+          "heading": "About this example",
+          "body": "This demonstration shows how structured content becomes a website."
+        },
+        {
+          "heading": "Explore",
+          "body": "Open the second page to try the task workspace."
+        }
+      ],
+      "interaction": "none"
+    },
+    {
+      "slug": "workspace",
+      "title": "Workspace",
+      "intro": "Organize a few tasks on this device.",
+      "sections": [
+        {
+          "heading": "How it works",
+          "body": "Add a task, mark it complete, or remove it."
+        }
+      ],
+      "interaction": "tasks"
+    }
+  ],
+  "review": {
+    "content_rights_confirmed": false,
+    "originality_reviewed": false,
+    "publish_approved": false
+  }
+}
