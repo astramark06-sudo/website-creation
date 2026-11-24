@@ -37,3 +37,15 @@ Design source: original Studio controls and existing design tokens. No third-par
 ## Schema evolution
 
 Use the [additive relational migration guide](RELATIONAL-MIGRATIONS.md) to migrate into a separate exported workspace. Existing tables and field definitions must remain unchanged; new fields require explicit defaults and newly added tables start empty. CI verification of this feature is required before use.
+
+## Project-specific application verification
+
+Use the optional installed Playwright browser tool (the repository pins playwright==1.51.0). Install the desired engine separately. From the repository, run:
+
+```sh
+python scripts/creator_relational_check.py --title Inventory --description 'Local inventory' --schema projects/relational-example.json --engine chromium --report relational-report.json
+```
+
+The verifier generates a fresh trusted bundle in a temporary directory, fingerprints every generated file, and runs the bundled server and actual browser in an isolated worker process. It tests every table and declared field, inserts synthetic records, creates cross-table relationships after all targets exist (including cyclic schemas), edits records, checks three viewport widths, checks missing-session requests, restarts the server, verifies persisted values, deletes records and checks reference clearing. Browser requests are restricted to the temporary loopback server and generated application routes. The worker has a bounded execution time; a failed check exits nonzero and reports diagnostics. The report path is never overwritten.
+
+This CLI tests a fresh export of the supplied schema and title/description, not an arbitrary executable ZIP or a user's live database. It does not certify comprehensive accessibility, production security, performance, hosting, or real data. No paid service or new runtime dependency is required. The browser regression test exercises this verifier on all three configured engines. Studio can also run the optional verifier when started with `--browser-checks`. In the relational panel, choose an installed browser engine, confirm the isolated synthetic-data test, and download the resulting JSON report. Editing the schema, title or description invalidates the displayed report. Reports fingerprint the generated files, not the ZIP archive metadata. Verification is not a public release approval.

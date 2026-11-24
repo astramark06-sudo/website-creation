@@ -88,7 +88,14 @@
 <label for="relational-schema">Relational schema JSON</label><textarea id="relational-schema" rows="12" maxlength="32768" spellcheck="false"></textarea>
 <div class="actions"><button id="relational-apply-json" type="button">Validate and apply JSON</button><button id="relational-save-json" type="button">Download schema JSON</button></div>
 <p class="section-hint">Manual JSON edits must be applied before returning to the visual editor. The export validates the current JSON again.</p></details>
-<button id="relational-export" type="button">Export relational database app</button></details>
+<button id="relational-export" type="button">Export relational database app</button>
+<section id="relational-check-panel" hidden aria-labelledby="relational-check-heading">
+<h3 id="relational-check-heading">Optional application verification</h3>
+<p>Test a fresh temporary export using synthetic records. Existing databases are not accessed. Select a browser already installed locally.</p>
+<label for="relational-check-engine">Browser engine</label><select id="relational-check-engine"><option value="chromium">Chromium</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select>
+<div class="actions"><button id="relational-check" type="button">Verify relational application</button><button id="relational-check-save" type="button" disabled>Download application report</button></div>
+<p id="relational-check-status" role="status" aria-live="polite">No report for this application.</p>
+<pre id="relational-check-result"></pre></section></details>
 <p id="status" role="status" aria-live="polite">Loading workspace…</p>
 </section>
 </main>

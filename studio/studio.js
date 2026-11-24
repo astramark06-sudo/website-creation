@@ -1,12 +1,13 @@
 'use strict';
 const $ = id => document.getElementById(id);
 let project, token, busy = false, latestRelease = null, latestBrowser = null, draftRevision = 0;
+let invalidateRelationalCheck = () => {};
 const status = text => { $('status').textContent = text; };
 const defaultDesign = () => ({layout:'grid',typeface:'system',density:'comfortable',surface:'rounded'});
 const approvals = () => ({content_rights_confirmed:false, originality_reviewed:false, publish_approved:false});
 const blank = slug => ({slug,title:slug==='home'?'Home':'New page',intro:'Write an original introduction.',sections:[{heading:'Section',body:'Add original content.'}],interaction:'none'});
 const fresh = () => ({version:1,title:'My website',description:'Describe your website.',theme:'teal',pages:[blank('home')],review:approvals()});
-function dirty(){project.review=approvals();draftRevision++;latestRelease=null;latestBrowser=null;$('browser-save').disabled=true;$('browser-check-results').replaceChildren();$('browser-check-status').textContent='Draft changed. Run new browser checks.';$('release-save').disabled=true;$('release-results').replaceChildren();$('release-status').textContent='Draft changed. Run a new release check.';status('Draft changed. Refresh preview or export.');}
+function dirty(){invalidateRelationalCheck();project.review=approvals();draftRevision++;latestRelease=null;latestBrowser=null;$('browser-save').disabled=true;$('browser-check-results').replaceChildren();$('browser-check-status').textContent='Draft changed. Run new browser checks.';$('release-save').disabled=true;$('release-results').replaceChildren();$('release-status').textContent='Draft changed. Run a new release check.';status('Draft changed. Refresh preview or export.');}
 function action(parent,label,fn){
   const b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',fn);parent.append(b);
 }
@@ -249,7 +250,37 @@ async function start(){
     window.initRelationalDesigner({
       example:{"version":1,"tables":[{"id":"categories","label":"Categories","fields":[{"id":"name","label":"Name","type":"text"}]},{"id":"items","label":"Items","fields":[{"id":"name","label":"Name","type":"text"},{"id":"quantity","label":"Quantity","type":"integer"},{"id":"state","label":"State","type":"choice","choices":["Available","Archived"]},{"id":"category","label":"Category","type":"relation","target":"categories"}]}]},
       validate:async schema=>(await (await request('/api/relational-validate',{schema})).json()).schema,
-      download
+      download,
+      onChange:()=>invalidateRelationalCheck()
+    });
+    $('relational-check-panel').hidden=!session.browser_checks_enabled;
+    let relationalReport=null,reportRevision=0;
+    invalidateRelationalCheck=()=>{
+      reportRevision++;relationalReport=null;$('relational-check-save').disabled=true;
+      $('relational-check-result').textContent='';
+      $('relational-check-status').textContent='Application changed. Run a new check.';
+    };
+    $('relational-check-engine').addEventListener('change',invalidateRelationalCheck);
+    const relationalInput=()=>({title:project.title,description:project.description,schema:JSON.parse($('relational-schema').value),engine:$('relational-check-engine').value,confirmed:true});
+    $('relational-check').addEventListener('click',()=>run(async()=>{
+      if(!session.browser_checks_enabled)return;
+      if(!confirm('Test a fresh temporary application using synthetic records in the selected installed browser?'))return;
+      invalidateRelationalCheck();const revision=reportRevision;
+      $('relational-check').disabled=true;$('relational-check-status').textContent='Running isolated application checks…';
+      try{
+        const input=relationalInput();
+        const result=await(await request('/api/relational-check',input)).json();
+        if(revision!==reportRevision||JSON.stringify(input)!==JSON.stringify(relationalInput()))return;
+        relationalReport=result;$('relational-check-save').disabled=false;
+        $('relational-check-status').textContent=result.status==='passed'?'Passed — fresh synthetic-data application check.':'Failed — review diagnostics and installed browser.';
+        $('relational-check-result').textContent=JSON.stringify(result,null,2);
+      }catch(error){
+        if(revision===reportRevision)$('relational-check-status').textContent='Check failed. Verify the schema and installed browser.';
+        throw error;
+      }finally{$('relational-check').disabled=false;}
+    }));
+    $('relational-check-save').addEventListener('click',()=>{
+      if(relationalReport)download(new Blob([JSON.stringify(relationalReport,null,2)],{type:'application/json'}),'relational-report.json');
     });
     $('relational-export').addEventListener('click',()=>run(async()=>{
       const schema=JSON.parse($('relational-schema').value);
