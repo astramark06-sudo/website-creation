@@ -151,7 +151,27 @@ def make_handler(port, token, root=ROOT):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8768)
+    parser.add_argument("--migrate-to", type=Path, help="Migrate into a separate new exported workspace")
+    parser.add_argument("--defaults", type=Path, help="JSON defaults for appended fields")
     args = parser.parse_args()
+    if (args.migrate_to is None) != (args.defaults is None):
+        parser.error("--migrate-to and --defaults are required together")
+    if args.migrate_to is not None:
+        try:
+            destination = args.migrate_to.resolve()
+            if destination == ROOT.resolve() or not destination.is_dir():
+                raise ValueError("Choose a separate extracted workspace")
+            for name in ("server.py", "creator_relational.py", "index.html", "app.js", "style.css", "config.json"):
+                if not (destination / name).is_file():
+                    raise ValueError("Destination is not an extracted relational workspace")
+            report = rel.migrate_database(ROOT / "workspace.sqlite3", destination / "workspace.sqlite3",
+                                          config_for(ROOT)["schema"], config_for(destination)["schema"],
+                                          rel.read_defaults(args.defaults))
+            print(json.dumps(report, indent=2))
+            print("Migration complete. Inspect the new workspace before using it. The source was not modified.")
+        except (ValueError, OSError, sqlite3.Error) as exc:
+            parser.error(str(exc))
+        return
     if not 1024 <= args.port <= 65535:
         parser.error("Choose a port from 1024 to 65535")
     try:

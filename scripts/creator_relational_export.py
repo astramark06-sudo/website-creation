@@ -29,7 +29,8 @@ def export_relational(title, description, schema):
                          "Create related records in their own tables, then select them from relation controls. "
                          "Deleting a record clears references to it. Keep your data private. "
                          "Stop the server before copying workspace.sqlite3 and config.json for backup. "
-                         "Do not change the schema of an existing database or expose the server publicly. "
+                         "For additive schema changes, stop both servers and use python server.py --migrate-to NEW_EXPORT --defaults defaults.json. "
+                         "Do not edit the schema of an existing database or expose the server publicly. "
                          "No user accounts or production deployment support.\n")
     return result.getvalue()
 
