@@ -14,12 +14,12 @@ import re
 try:
     from .creator_build import CSS, JS, THEMES, inspect_html
     from .creator_design import design_for, design_css
-    from .creator_components import validate_component, render_component, component_css
+    from .creator_components import validate_component, render_component, component_css, links
     from .creator_search import SEARCH_PANEL, SEARCH_CSS, SEARCH_JS
 except ImportError:
     from creator_build import CSS, JS, THEMES, inspect_html
     from creator_design import design_for, design_css
-    from creator_components import validate_component, render_component, component_css
+    from creator_components import validate_component, render_component, component_css, links
     from creator_search import SEARCH_PANEL, SEARCH_CSS, SEARCH_JS
 
 MAX_SPEC = 128 * 1024
@@ -103,6 +103,10 @@ def validate_spec(spec, publish=False):
             require_text(section.get("heading"), "Section heading", 120)
             require_text(section.get("body"), "Section body", 4000)
             validate_component(section)
+    for page in pages:
+        for section in page["sections"]:
+            if section.get("kind") == "links" and any(target not in seen for _, target in links(section["body"])):
+                raise ValueError("Page link points to an unknown page address")
     if pages[0]["slug"] != "home":
         raise ValueError("The first page must have slug home")
     if len(spec_bytes(spec)) > MAX_SPEC:
