@@ -1,0 +1,56 @@
+name: Build and check a portable draft (no deployment)
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: Committed project to check (only public-safe content)
+        type: choice
+        options:
+          - example
+          - publish-candidate
+        required: true
+        default: example
+
+permissions:
+  contents: read
+
+jobs:
+  preflight:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+      - name: Install pinned browser test tool
+        run: python -m pip install "playwright==1.51.0"
+      - name: Install browser engines
+        run: python -m playwright install --with-deps chromium firefox webkit
+      - name: Build and verify portable draft
+        env:
+          PROJECT_CHOICE: ${{ inputs.project }}
+        run: |
+          case "$PROJECT_CHOICE" in
+            example) spec=projects/example.json ;;
+            publish-candidate) spec=projects/publish.json ;;
+            *) exit 2 ;;
+          esac
+          if [ ! -f "$spec" ]; then
+            echo "Selected committed project is missing."
+            exit 2
+          fi
+          mkdir -p build
+          python scripts/creator_preflight.py --spec "$spec" --output build/preflight --engine chromium --engine firefox --engine webkit
+      - name: Preserve draft and evidence
+        if: always() && hashFiles('build/preflight/preflight-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: creator-draft-${{ github.sha }}
+          path: build/preflight/
+          retention-days: 7
+          if-no-files-found: error

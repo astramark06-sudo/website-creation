@@ -10,6 +10,8 @@ from playwright.sync_api import expect, sync_playwright
 from scripts.creator_studio import make_handler
 from scripts.creator_project import build, read_spec, verify
 from scripts.creator_release import release_report
+from scripts.creator_preflight import prepare_draft
+from scripts.creator_bundle import read_verified_bundle
 from test_studio import serve
 
 
@@ -27,6 +29,20 @@ class ReleaseBrowserTests(unittest.TestCase):
         self.assertEqual(report["browser_reports"][0]["status"], "passed")
         self.assertEqual(report["browser_reports"][0]["files"], report["files"])
         self.assertFalse(report["publication_ready"])
+
+    def test_portable_draft_preflight_with_installed_engine(self):
+        root = Path(__file__).resolve().parents[2]
+        spec = read_spec(root / "projects" / "example.json")
+        spec["review"] = {key: True for key in spec["review"]}
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "preflight"
+            report = prepare_draft(spec, output, engines=[browser_engine()])
+            self.assertEqual(report["status"], "passed")
+            draft, evidence = read_verified_bundle((output / "creator-project.zip").read_bytes())
+            self.assertFalse(any(draft["review"].values()))
+            self.assertEqual(report["release"]["files"], evidence["files"])
+            self.assertEqual(report["release"]["project_sha256"], evidence["project_sha256"])
+            self.assertEqual(report["release"]["browser_reports"][0]["browser"], browser_engine())
 
     def test_combined_report_studio_consent_and_invalidation(self):
         root = Path(__file__).resolve().parents[2]
