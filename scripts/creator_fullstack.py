@@ -12,11 +12,25 @@ except ImportError:
 
 TEMPLATE = Path(__file__).resolve().parents[1] / "templates" / "fullstack"
 FILES = ("server.py", "index.html", "style.css", "app.js")
+MODELS = {
+    "records": [],
+    "inventory": [{"id": "quantity", "label": "Quantity", "type": "integer"},
+                  {"id": "location", "label": "Storage location", "type": "text"}],
+    "issues": [{"id": "priority", "label": "Priority", "type": "choice", "choices": ["Low", "Normal", "High"]},
+               {"id": "category", "label": "Category", "type": "text"}],
+    "reading": [{"id": "pages", "label": "Pages", "type": "integer"},
+                {"id": "format", "label": "Format", "type": "choice", "choices": ["Print", "Digital", "Audio"]}],
+}
 
 
-def export_fullstack(title, description):
+
+def export_fullstack(title, description, model="records"):
+    if not isinstance(model, str) or model not in MODELS:
+        raise ValueError("Unsupported data model")
     config = {"title": require_text(title, "Title", 120),
               "description": require_text(description, "Description", 1000)}
+    if model != "records":
+        config.update(model=model, fields=MODELS[model])
     output = io.BytesIO()
     with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as archive:
         for name in FILES:
@@ -32,8 +46,9 @@ def main():
     parser.add_argument("--title", required=True)
     parser.add_argument("--description", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument("--model", choices=tuple(MODELS), default="records")
     args = parser.parse_args()
-    data = export_fullstack(args.title, args.description)
+    data = export_fullstack(args.title, args.description, args.model)
     with args.output.open("xb") as stream:
         stream.write(data)
 

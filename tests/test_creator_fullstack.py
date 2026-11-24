@@ -7,7 +7,7 @@ import tempfile
 import unittest
 import zipfile
 
-from scripts.creator_fullstack import export_fullstack, TEMPLATE
+from scripts.creator_fullstack import export_fullstack, TEMPLATE, MODELS
 
 
 class FullstackTests(unittest.TestCase):
@@ -38,6 +38,39 @@ class FullstackTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             with self.assertRaises(ValueError):
                 app["change_item"](Path(tmp) / "db", {"action":"add", "title":"", "notes":""})
+
+    def test_model_fields_persist_search_and_validate(self):
+        app = runpy.run_path(str(TEMPLATE / "server.py"))
+        fields = MODELS["inventory"]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "inventory.sqlite3"
+            change, listing = app["change_item"], app["list_items"]
+            payload = {"action": "add", "title": "Notebook", "notes": "", "details": {"quantity": 12, "location": "Shelf A"}}
+            change(path, payload, fields)
+            item = listing(path, "shelf a", fields=fields)[0]
+            self.assertEqual(item["details"]["quantity"], 12)
+            change(path, {"action": "edit", "id": item["id"], "title": "Notebook", "notes": "", "details": {"quantity": 7, "location": "Shelf B"}}, fields)
+            self.assertEqual(listing(path, fields=fields)[0]["details"]["quantity"], 7)
+            with self.assertRaises(ValueError):
+                change(path, {**payload, "details": {"quantity": True, "location": "Shelf A"}}, fields)
+            with self.assertRaises(ValueError):
+                listing(path, fields=MODELS["issues"])
+            change(path, {"action": "delete", "id": item["id"]}, fields)
+            self.assertEqual(listing(path, fields=fields), [])
+
+    def test_model_export_and_rejection(self):
+        with zipfile.ZipFile(io.BytesIO(export_fullstack("Original", "Inventory", "inventory"))) as z:
+            config = json.loads(z.read("config.json"))
+            self.assertEqual(config["fields"], MODELS["inventory"])
+        with self.assertRaises(ValueError):
+            export_fullstack("Original", "Workspace", "unknown")
+
+    def test_choice_validation(self):
+        app = runpy.run_path(str(TEMPLATE / "server.py"))
+        fields = MODELS["issues"]
+        with tempfile.TemporaryDirectory() as tmp:
+            with self.assertRaises(ValueError):
+                app["change_item"](Path(tmp) / "db", {"action": "add", "title": "Original", "notes": "", "details": {"priority": "Invalid", "category": ""}}, fields)
 
 
 if __name__ == "__main__":

@@ -11,3 +11,9 @@ python scripts/creator_fullstack.py --title "My records" --description "Original
 ```
 
 The regression tests validate ZIP content and database operations. A dedicated Chromium integration test exports the actual app from the studio, exercises create/edit/complete/filter/search/delete, checks unauthenticated requests are rejected, and restarts the local server against the same database. Verify the current CI result before claiming the browser test passed. Public deployment remains separate and unsupported.
+
+## Typed data-model presets
+
+Choose General records, Inventory, Issue tracking or Reading catalogue before exporting. Inventory adds quantity and storage location; Issue tracking adds priority and category; Reading catalogue adds pages and format. The generated form and list are driven by bounded model fields in config.json. Integers are validated as integers from 0 to 1,000,000; text is bounded; choices must match the configured options. The database stores model fields as structured JSON alongside existing records and rejects mismatched model definitions. Search includes field values. Existing general-record databases remain compatible. Use a new export folder and database for a different model. No arbitrary SQL, multi-user authentication, external data or production hosting is provided.
+
+CLI: `python scripts/creator_fullstack.py --title "Inventory" --description "Local supplies" --model inventory --output inventory.zip`.
