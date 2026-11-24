@@ -38,8 +38,16 @@ jobs:
         run: python -m pip install "playwright==1.51.0"
       - name: Install Chromium
         run: python -m playwright install --with-deps chromium
-      - name: Check exact reviewed output in Chromium
-        run: python scripts/creator_browser.py --spec projects/publish.json --output build/publish --publish --report build/browser-report.json
+      - name: Require clean review and exact-output Chromium evidence
+        run: python scripts/creator_release.py --spec projects/publish.json --output build/publish --require-reviewed --engine chromium --report build/release-report.json
+      - name: Preserve release review evidence
+        if: always() && hashFiles('build/release-report.json') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: creator-release-evidence
+          path: build/release-report.json
+          retention-days: 7
+          if-no-files-found: error
       - uses: actions/upload-pages-artifact@v5
         with:
           path: build/publish
