@@ -29,21 +29,26 @@ def validate_fields(fields, require_nonempty=False):
     if not isinstance(fields, list) or len(fields) > 8 or (require_nonempty and not fields):
         raise ValueError("Custom schemas require 1 to 8 fields")
     seen = set()
+    workflow_count = 0
     for field in fields:
         if not isinstance(field, dict):
             raise ValueError("Invalid field")
         kind = field.get("type")
-        keys = {"id", "label", "type"} | ({"choices"} if kind == "choice" else set())
-        if set(field) != keys or kind not in ("integer", "text", "choice", "link"):
+        keys = {"id", "label", "type"} | ({"choices"} if kind in ("choice", "stage") else set())
+        if set(field) != keys or kind not in ("integer", "text", "choice", "link", "stage"):
             raise ValueError("Unsupported field type")
         name, label = field["id"], field["label"]
         if (not isinstance(name, str) or not FIELD_ID.fullmatch(name) or name in seen
                 or not isinstance(label, str) or not label.strip() or len(label) > 80):
             raise ValueError("Invalid or duplicate field")
         seen.add(name)
-        if kind == "choice":
+        if kind == "stage":
+            workflow_count += 1
+            if workflow_count > 1:
+                raise ValueError("Only one workflow stage field is supported")
+        if kind in ("choice", "stage"):
             choices = field["choices"]
-            if (not isinstance(choices, list) or not 1 <= len(choices) <= 12
+            if (not isinstance(choices, list) or not (2 if kind == "stage" else 1) <= len(choices) <= 12
                     or any(not isinstance(v, str) or not v.strip() or len(v) > 80 for v in choices)
                     or len(set(choices)) != len(choices)):
                 raise ValueError("Invalid choices")

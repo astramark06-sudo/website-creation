@@ -227,12 +227,12 @@ async function start(){
       if(!lines.length||lines.length>8)throw new Error('Custom models require 1 to 8 field lines.');
       return lines.map((line,index)=>{
         const parts=line.split('|').map(v=>v.trim()),type=(parts[1]||'').toLowerCase();
-        if(!parts[0]||parts[0].length>80||!['text','integer','choice','link'].includes(type))throw new Error('Use: Label | text, integer, link, or choice.');
+        if(!parts[0]||parts[0].length>80||!['text','integer','choice','link','stage'].includes(type))throw new Error('Use: Label | text, integer, link, choice or stage.');
         const field={id:'field'+(index+1),label:parts[0],type};
-        if(type==='choice'){
+        if(type==='choice'||type==='stage'){
           if(parts.length!==3)throw new Error('Choice fields need a third part with comma-separated options.');
           const choices=parts[2].split(',').map(v=>v.trim()).filter(Boolean);
-          if(!choices.length||choices.length>12||new Set(choices).size!==choices.length||choices.some(v=>v.length>80))throw new Error('Choice fields need 1 to 12 unique options.');
+          if(choices.length<(type==='stage'?2:1)||choices.length>12||new Set(choices).size!==choices.length||choices.some(v=>v.length>80))throw new Error('Choice fields need 1 to 12 unique options.');
           field.choices=choices;
         }else if(parts.length!==2)throw new Error('Non-choice fields use exactly: Label | type.');
         return field;

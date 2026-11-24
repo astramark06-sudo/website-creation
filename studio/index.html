@@ -74,8 +74,8 @@
 <p>Export a separate local data application with Python, SQLite, search, filters and record editing. Not a public multi-user deployment.</p>
 <label>Database application model<select id="fullstack-model"><option value="records">General records</option><option value="inventory">Inventory</option><option value="issues">Issue tracking</option><option value="reading">Reading catalogue</option><option value="custom">Custom fields</option></select></label>
 <div id="custom-model-fields" hidden>
-<label>Custom fields<textarea id="custom-fields" rows="5" maxlength="2000" placeholder="Quantity | integer&#10;Location | text&#10;Priority | choice | Low, Normal, High&#10;Related item | link"></textarea></label>
-<p class="section-hint">One field per line: Label | text, integer, link, or choice | option 1, option 2. Maximum 8 fields.</p>
+<label>Custom fields<textarea id="custom-fields" rows="5" maxlength="2000" placeholder="Quantity | integer&#10;Location | text&#10;Priority | choice | Low, Normal, High&#10;Related item | link&#10;Workflow | stage | Draft, Review, Approved"></textarea></label>
+<p class="section-hint">One field per line: Label | text, integer, link, choice or stage. Choice and stage need comma-separated options after a second pipe. Maximum 8 fields, one stage field. Stage order is enforced; completion is separate.</p>
 </div>
 <button id="fullstack-export" type="button">Export local database app</button>
 <p id="status" role="status" aria-live="polite">Loading workspace…</p>
