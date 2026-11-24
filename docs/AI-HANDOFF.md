@@ -7,6 +7,17 @@
 
 > This is a dated handoff snapshot, not live state. Before acting, fetch the current `main` head, open pull requests, recent Actions runs, and repository rulesets. Another agent or session may have changed the repository since this file was written.
 
+## Continuation checkpoint — 2026-11-24
+
+The original November 3 snapshot below is retained as historical context. At commit `44663d337cf90c1b788a2cc9b70c52831cde93f4`, the repository is a reusable website creation toolkit, not an empty starter.
+
+- Merged capabilities: original multipage static generation, local Creator Studio, reusable sections, reference-informed planning, optional local AI and vision, free tool catalogue, project-specific release evidence, reviewed manual GitHub Pages workflow, local relational database applications, schema migrations and UTCP interoperability.
+- Local authenticated staging export includes workspace roles, isolated data, login attempt limits, private backups with session cleanup, offline backup verification and authenticated browser checks in Studio.
+- [PR #47](https://github.com/astramark06-sudo/website-creation/pull/47), [PR #50](https://github.com/astramark06-sudo/website-creation/pull/50), [PR #51](https://github.com/astramark06-sudo/website-creation/pull/51) and [PR #52](https://github.com/astramark06-sudo/website-creation/pull/52) merged after eight successful PR workflows each, including the three-engine Studio matrix. These results apply to the checked PR heads, not arbitrary generated projects or a separate post-merge certification.
+- No production backend host, public release, distributed authentication safeguards, live website crawler or automatic restore has been provisioned. Keep Studio and local staging private.
+
+**Resume procedure:** fetch live main, open PRs and checks. [PR #53](https://github.com/astramark06-sudo/website-creation/pull/53) introduces static-site browser selection in Studio; verify its latest head and checks rather than assuming it is merged. Choose the next improvement from actual gaps, not the historical milestone list. Preserve zero-spend and original/licensed content requirements. Production hosting, complete recovery validation and an approved website brief remain separate gates.
+
 ## Mission and constraints
 
 Continue preparing this repository for high-quality website development. The owner requires a strict **zero-spend** approach: no paid subscriptions, paid APIs, API credits, paid templates, paid component licenses, paid hosting, or paid CI services. Prefer open-source tools and free GitHub features. Public-repository GitHub Actions and GitHub Pages are acceptable.
