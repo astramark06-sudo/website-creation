@@ -80,6 +80,17 @@ The staging login view reserves an installation-wide budget of ten attempts per 
 
 Stop the local server before running `python -m django backup_staging --output PRIVATE_NEW.sqlite3 --settings=staging_auth.settings`. Choose a private new path outside source control. The command opens the source read-only, uses SQLite's snapshot API, verifies integrity and required tables, removes copied sessions and verifies the resulting database again. It never overwrites a destination or changes the original database. The snapshot retains account hashes, permissions and records; it must be protected like the original database. Use a separate stopped local installation and explicit operator review for recovery; point-in-time restore can restore old memberships, and automatic in-place restore is deliberately unsupported. Session rows are absent from the snapshot, but the installation secret remains an independent operator-managed credential. No private data is uploaded or tested in CI.
 
+### Separate recovery copy
+
+For a trusted, stopped and standalone snapshot, use the read-only verification option first. Then choose an existing private directory and a new recovery filename:
+
+```sh
+python -m django backup_staging --verify PRIVATE_NEW.sqlite3 --settings=staging_auth.settings
+python -m django backup_staging --recovery-copy PRIVATE_NEW.sqlite3 --destination PRIVATE_RECOVERY.sqlite3 --settings=staging_auth.settings
+```
+
+The recovery-copy command refuses the configured active database as source or destination, existing destinations and destination sidecars. It checks the snapshot, copies it exclusively with private file permissions where supported, checks the new copy, and compares bytes in bounded chunks. Neither the original snapshot nor the active database is modified. It does not activate the copy, change configuration, run migrations, reconcile historical memberships, rotate secrets or launch a server. Keep both files private, use only trusted stopped snapshots, and review the data and historical access before separately configuring an isolated recovery installation. The integration test uses synthetic records and a second Django connection to check retained relationships, roles and independent writes; this is not a full production disaster-recovery or security certification.
+
 ## Authenticated project verification
 
 Start Studio with `python scripts/creator_studio.py --browser-checks` and open the multi-table relational application panel. Choose an installed browser and **Verify authenticated application**. The check requires the optional Django and Playwright dependencies, uses fresh synthetic accounts and records, and offers an `authenticated-report.json` download. Changing the application or browser invalidates the displayed report. The check is disabled unless browser checks are explicitly enabled. It never approves a public release.

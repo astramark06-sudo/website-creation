@@ -11,11 +11,11 @@ from django.contrib.auth import get_user_model
 from django.contrib.sessions.models import Session
 from django.core.management import call_command
 from django.core.management.base import CommandError
-from django.db import connection
+from django.db import connection, transaction
 from django.test import Client, TestCase, TransactionTestCase
 
 from scripts.creator_relational import read_schema
-from .backup import backup_staging, check_backup
+from .backup import backup_staging, check_backup, recovery_copy
 from .login_guard import MAX_ATTEMPTS, reserve_attempt
 from .models import LoginBudget, Membership, Record, Workspace
 
@@ -101,6 +101,82 @@ class BackupTests(TransactionTestCase):
             self.assertEqual(target.read_bytes(), before)
             self.assertEqual(backup_staging(source, Path(temp) / "second.sqlite3"),
                              {"workspaces": 1, "records": 1, "sessions_retained": 0})
+
+    def test_recovery_copy_preserves_relationships_roles_and_source(self):
+        schema = read_schema(ROOT / "projects" / "relational-example.json")
+        owner = get_user_model().objects.create_user(username="recovery_owner")
+        viewer = get_user_model().objects.create_user(username="recovery_viewer")
+        workspace = Workspace.objects.create(slug="recovery", title="Recovery", schema=schema)
+        Membership.objects.create(workspace=workspace, user=owner, role="owner")
+        Membership.objects.create(workspace=workspace, user=viewer, role="viewer")
+        category = Record.objects.create(workspace=workspace, table_id="categories", data={"name": "Sample"})
+        Record.objects.create(workspace=workspace, table_id="items", data={
+            "name": "Item", "quantity": 1, "state": "Available", "category": category.pk,
+        })
+        client = Client()
+        client.force_login(viewer)
+        source = Path(connection.settings_dict["NAME"])
+        with tempfile.TemporaryDirectory() as temp:
+            snapshot = Path(temp) / "snapshot.sqlite3"
+            restored = Path(temp) / "recovery.sqlite3"
+            backup_staging(source, snapshot)
+            before = snapshot.read_bytes()
+            out = io.StringIO()
+            call_command("backup_staging", recovery_copy=snapshot, destination=restored, stdout=out)
+            self.assertIn("No database activated", out.getvalue())
+            self.assertEqual(restored.read_bytes(), before)
+            self.assertEqual(snapshot.read_bytes(), before)
+            self.assertEqual(check_backup(restored), check_backup(snapshot))
+            # Open the recovery copy in a separate Django connection, without
+            # replacing the active test database or reusing its session.
+            from django.db.backends.sqlite3.base import DatabaseWrapper
+            from django.db import connections
+            config = dict(connection.settings_dict, NAME=str(restored))
+            alias = "recovery_check"
+            recovered = DatabaseWrapper(config, alias=alias)
+            setattr(connections._connections, alias, recovered)
+            try:
+                self.assertEqual(Session.objects.using(alias).count(), 0)
+                self.assertEqual(Membership.objects.using(alias).get(user_id=viewer.pk).role, "viewer")
+                self.assertEqual(Membership.objects.using(alias).get(user_id=owner.pk).role, "owner")
+                item = Record.objects.using(alias).get(table_id="items")
+                self.assertEqual(item.data["category"], category.pk)
+                self.assertEqual(Record.objects.using(alias).get(pk=item.data["category"]).data["name"], "Sample")
+                self.assertEqual(Workspace.objects.using(alias).get(slug="recovery").schema, schema)
+                with transaction.atomic(using=alias):
+                    Record.objects.using(alias).filter(pk=item.pk).update(data={**item.data, "quantity": 2})
+                self.assertEqual(Record.objects.using(alias).get(pk=item.pk).data["quantity"], 2)
+                self.assertEqual(Record.objects.get(pk=item.pk).data["quantity"], 1)
+            finally:
+                recovered.close()
+                delattr(connections._connections, alias)
+            self.assertEqual(snapshot.read_bytes(), before)
+            self.assertEqual(Session.objects.count(), 1)
+            with self.assertRaises(FileExistsError):
+                recovery_copy(snapshot, restored)
+            with self.assertRaises(CommandError):
+                call_command("backup_staging", recovery_copy=snapshot, destination=source, stdout=out)
+            with self.assertRaises(CommandError):
+                call_command("backup_staging", recovery_copy=source, destination=Path(temp) / "bad.sqlite3", stdout=out)
+            self.assertFalse((Path(temp) / "bad.sqlite3").exists())
+            with self.assertRaises(CommandError):
+                call_command("backup_staging", recovery_copy=snapshot, stdout=out)
+            self.assertEqual(snapshot.read_bytes(), before)
+
+    def test_recovery_rejects_sidecars_and_invalid_snapshot(self):
+        with tempfile.TemporaryDirectory() as temp:
+            source = Path(temp) / "invalid.sqlite3"
+            source.write_bytes(b"invalid snapshot")
+            destination = Path(temp) / "new.sqlite3"
+            with self.assertRaises(sqlite3.Error):
+                recovery_copy(source, destination)
+            self.assertFalse(destination.exists())
+            sidecar = Path(str(destination) + "-wal")
+            sidecar.write_bytes(b"keep")
+            with self.assertRaisesRegex(ValueError, "sidecars"):
+                recovery_copy(source, destination)
+            self.assertEqual(sidecar.read_bytes(), b"keep")
+            self.assertFalse(destination.exists())
 
     def test_invalid_source_cleanup_and_existing_file_preservation(self):
         with tempfile.TemporaryDirectory() as temp:
