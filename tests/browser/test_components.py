@@ -58,5 +58,42 @@ class ComponentBrowserTests(unittest.TestCase):
                 browser.close()
 
 
+    def test_page_address_rename_preserves_links_and_blocks_referenced_deletion(self):
+        with sync_playwright() as pw, serve(lambda port: make_handler(port, "rename-test")) as url:
+            browser = launch_browser(pw)
+            try:
+                page = browser.new_page()
+                page.goto(url)
+                expect(page.locator("#status")).to_contain_text("Preview generated")
+                expect(page.locator("#preview")).to_be_enabled()
+                cards = page.locator(".page-card")
+                first = cards.first.locator(".section-card").first
+                first.get_by_label("Component type").select_option("links")
+                body = first.get_by_label("Section body")
+                body.fill("Open workspace | workspace\nBack home | home")
+                address = cards.nth(1).get_by_label("Page address")
+                for invalid in ("home", "index", "com1", "Bad address", ""):
+                    address.fill(invalid)
+                    address.press("Tab")
+                    expect(address).to_have_value("workspace")
+                    expect(body).to_have_value("Open workspace | workspace\nBack home | home")
+                address.fill("guide")
+                address.press("Tab")
+                expect(address).to_have_value("guide")
+                expect(body).to_have_value("Open workspace | guide\nBack home | home")
+                expect(page.locator("#status")).to_contain_text("1 page links updated")
+                page.get_by_role("button", name="Refresh preview").click()
+                expect(page.locator("#status")).to_contain_text("Preview generated")
+                expect(page.frame_locator("#frame").locator(".component-links a").first).to_have_attribute("data-preview-href", "guide.html")
+                cards.nth(1).get_by_role("button", name="Remove page").click()
+                expect(page.locator("#status")).to_contain_text("Cannot remove a referenced page")
+                expect(cards).to_have_count(2)
+                body.fill("Back home | home")
+                cards.nth(1).get_by_role("button", name="Remove page").click()
+                expect(cards).to_have_count(1)
+            finally:
+                browser.close()
+
+
 if __name__ == "__main__":
     unittest.main()
