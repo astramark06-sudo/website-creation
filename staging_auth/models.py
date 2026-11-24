@@ -8,6 +8,7 @@ from scripts.creator_access import Role
 class Workspace(models.Model):
     slug = models.SlugField(max_length=32, unique=True)
     title = models.CharField(max_length=120)
+    description = models.TextField(max_length=1000, blank=True, default="")
     schema = models.JSONField()
 
 
