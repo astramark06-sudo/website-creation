@@ -188,3 +188,17 @@ class AuthenticatedStagingTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn("text/css", response.headers["Content-Type"])
         self.assertEqual(response.headers["Cache-Control"], "no-store")
+
+
+    def test_login_origin_policy(self):
+        password = secrets.token_urlsafe(24)
+        self.owner.set_password(password)
+        self.owner.save(update_fields=["password"])
+        client = Client(enforce_csrf_checks=True, HTTP_HOST="127.0.0.1")
+        response = client.get("/login/")
+        self.assertEqual(response.headers["Referrer-Policy"], "same-origin")
+        token = client.cookies["creator_staging_csrf"].value
+        values = {"username": self.owner.username, "password": password, "csrfmiddlewaretoken": token}
+        for origin in ("null", "https://example.invalid"):
+            self.assertEqual(client.post("/login/", values, HTTP_ORIGIN=origin).status_code, 403)
+        self.assertEqual(client.post("/login/", values, HTTP_ORIGIN="http://127.0.0.1").status_code, 302)
