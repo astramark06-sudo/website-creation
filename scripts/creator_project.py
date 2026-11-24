@@ -13,8 +13,10 @@ import re
 
 try:
     from .creator_build import CSS, JS, THEMES, inspect_html
+    from .creator_design import design_for, design_css
 except ImportError:
     from creator_build import CSS, JS, THEMES, inspect_html
+    from creator_design import design_for, design_css
 
 MAX_SPEC = 128 * 1024
 SLUG = re.compile(r"[a-z][a-z0-9-]{0,47}\Z")
@@ -41,7 +43,11 @@ def exact_keys(value, allowed, label):
 
 
 def validate_spec(spec, publish=False):
-    exact_keys(spec, {"version", "title", "description", "theme", "pages", "review"}, "project")
+    fields = {"version", "title", "description", "theme", "pages", "review"}
+    if isinstance(spec, dict) and "design" in spec:
+        fields.add("design")
+    exact_keys(spec, fields, "project")
+    design_for(spec)
     if type(spec["version"]) is not int or spec["version"] != 1:
         raise ValueError("Unsupported specification version")
     require_text(spec["title"], "Title", 120)
@@ -126,7 +132,7 @@ def digest(data):
 def assemble(spec):
     validate_spec(spec)
     files = {filename(page): render_page(spec, page) for page in spec["pages"]}
-    files["style.css"] = CSS.replace("ACCENT", THEMES[spec["theme"]])
+    files["style.css"] = CSS.replace("ACCENT", THEMES[spec["theme"]]) + design_css(spec)
     if any(p["interaction"] == "tasks" for p in spec["pages"]):
         files["app.js"] = JS
     files[".nojekyll"] = ""

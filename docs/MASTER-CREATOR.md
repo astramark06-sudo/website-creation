@@ -94,3 +94,7 @@ The model returns page text and structure only. The generator validates the resp
 ## Browser verification
 
 The dedicated Creator studio browser verification workflow runs Chromium against the local studio and its generated output on Ubuntu 24.04. It tests editing, responsive preview, ZIP export, task persistence, and local request boundaries. Playwright is test-only. This smoke test does not replace comprehensive accessibility or cross-browser review.
+
+## Original design system options
+
+Structured projects now support six accent themes (teal, blue, plum, forest, terracotta and slate), four layouts (grid, editorial, showcase and compact), two heading typefaces, two spacing choices and three card styles. The optional `design` object is validated against fixed choices; old project files remain compatible, and default CSS output is unchanged. The studio exposes the options and lets you move content sections up or down. The styles use project-owned CSS and system fonts with no external dependencies or user-supplied executable styling. Tests exercise all 48 layout/typeface/spacing/card combinations and check accent contrast against white and the base background; that is not a complete accessibility assessment.
