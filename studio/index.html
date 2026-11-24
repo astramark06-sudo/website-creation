@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Master Creator Studio</title>
+<link rel="stylesheet" href="/studio.css">
+<script defer src="/studio.js"></script>
+</head>
+<body>
+<header><div><p class="kicker">LOCAL WORKSPACE</p><h1>Master Creator</h1></div><span>Zero paid APIs · Local only</span></header>
+<main>
+<section class="panel" aria-labelledby="project-heading">
+<h2 id="project-heading">Project</h2>
+<label>Website name<input id="title" maxlength="120"></label>
+<label>Description<textarea id="description" rows="3" maxlength="1000"></textarea></label>
+<label>Color theme<select id="theme"><option value="teal">Teal</option><option value="blue">Blue</option><option value="plum">Plum</option></select></label>
+<div class="actions"><button id="new">New project</button><label>Import JSON<input id="import" type="file" accept=".json,application/json"></label><button id="save">Save JSON</button></div>
+<h2>Pages</h2><div id="pages"></div><button id="add-page">Add page</button>
+</section>
+<section class="panel" aria-labelledby="preview-heading">
+<h2 id="preview-heading">Website preview</h2>
+<p>Review the layout at three viewport widths. Test interactions in the exported site.</p>
+<div class="actions"><label>Page<select id="preview-page"></select></label><label>Viewport<select id="viewport"><option value="100%">Desktop</option><option value="768px">Tablet</option><option value="390px">Mobile</option></select></label><button id="preview">Refresh preview</button></div>
+<div class="frame-wrap"><iframe id="frame" title="Website preview" sandbox="" referrerpolicy="no-referrer"></iframe></div>
+<h2>Build and export</h2>
+<p>Export verified original website files and editable JSON. Publication requires separate content-rights, originality and release approval.</p>
+<button id="export" class="primary">Build and export ZIP</button>
+<p id="status" role="status" aria-live="polite">Loading workspace…</p>
+</section>
+</main>
+</body>
+</html>
