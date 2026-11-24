@@ -12,6 +12,7 @@ except ImportError:
     from creator_project import require_text, validate_spec
 
 REFERENCE_LIMIT = 64 * 1024
+MAX_REFERENCE_PAGES = 5
 STANDARD_TAGS = frozenset("header nav main section article aside footer h1 h2 h3 h4 h5 h6 p img picture figure figcaption a button form input select textarea table th td ul ol li details summary video audio script".split())
 
 
@@ -51,3 +52,45 @@ def reference_plan(source, title, objective, authorized):
             "suggestions": suggestions, "project": spec,
             "limitations": ["Structural hints only; no remote fetch, rendering, source copying or backend inference.",
                             "The new project is an unapproved starter; replace placeholder content and review design before publishing."]}
+
+
+def reference_batch_plan(sources, title, objective, authorized):
+    """Analyze several authorized local pages without retaining source identifiers."""
+    if authorized is not True:
+        raise ValueError("Confirm permission to analyze all references")
+    if not isinstance(sources, list) or not 2 <= len(sources) <= MAX_REFERENCE_PAGES:
+        raise ValueError("Choose two to five local HTML references")
+    if any(not isinstance(source, str) for source in sources):
+        raise ValueError("References must be text")
+    if any(len(source) > REFERENCE_LIMIT for source in sources) or sum(
+            len(source.encode("utf-8")) for source in sources) > REFERENCE_LIMIT:
+        raise ValueError("Combined references exceed 64 KiB")
+    results = [reference_plan(source, title, objective, True) for source in sources]
+    draft = results[0]["project"]
+    pages = []
+    observations = []
+    suggestions = []
+    for index, result in enumerate(results, start=1):
+        observations.append({"reference_number": index, **result["observations"]})
+        for suggestion in result["suggestions"]:
+            if suggestion not in suggestions:
+                suggestions.append(suggestion)
+        page = result["project"]["pages"][0].copy()
+        if index > 1:
+            page["slug"] = f"topic-{index}"
+            page["title"] = f"Topic {index}"
+        pages.append(page)
+    draft["pages"] = pages
+    validate_spec(draft)
+    return {
+        "observations": {"reference_count": len(sources), "pages": observations},
+        "suggestions": suggestions + [
+            "Rename and organize proposed pages around the actual audience; the generic topic names are not taken from the references."],
+        "project": draft,
+        "limitations": [
+            "Local structural observations only; source names, text, links, scripts, styling and assets are not copied.",
+            "The input order supplies generic draft pages, not inferred navigation, private functionality or a reconstructed site.",
+            "No remote retrieval, rendering, authentication or backend inference.",
+            "The draft remains unapproved; replace placeholders and review independently before publishing.",
+        ],
+    }
