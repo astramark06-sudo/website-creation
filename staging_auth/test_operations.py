@@ -96,7 +96,6 @@ class BackupTests(TransactionTestCase):
             with self.assertRaises(ValueError):
                 check_backup(source)
             self.assertTrue(Session.objects.filter(session_key=session_key).exists())
-            self.assertTrue(Session.objects.filter(session_key=session_key).exists())
             with self.assertRaises(CommandError):
                 call_command("backup_staging", output=target, stdout=out)
             self.assertEqual(target.read_bytes(), before)
