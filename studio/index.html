@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Master Creator Studio</title>
 <link rel="stylesheet" href="/studio.css">
+<script defer src="/visual-reference.js"></script>
 <script defer src="/studio.js"></script>
 </head>
 <body>
@@ -45,6 +46,14 @@
 <label><span><input id="reference-authorized" type="checkbox" style="width:auto"> I have permission to analyze this reference.</span></label>
 <button id="analyze-reference" type="button">Analyze reference and propose draft</button>
 <pre id="reference-report" style="white-space:pre-wrap;overflow-wrap:anywhere" aria-live="polite"></pre>
+<details id="visual-reference-panel">
+<summary>Screenshot-informed design</summary>
+<p>Analyze coarse visual properties of an authorized PNG or JPEG locally. No screenshot is uploaded. This proposes an independent layout, not a visual clone.</p>
+<label>Local screenshot<input id="visual-file" type="file" accept="image/png,image/jpeg"></label>
+<label><span><input id="visual-authorized" type="checkbox"> I have permission to analyze this screenshot.</span></label>
+<button id="visual-analyze" type="button">Propose screenshot-informed draft</button>
+<pre id="visual-report" aria-live="polite"></pre>
+</details>
 <h2>Pages</h2><div id="pages"></div><button id="add-page">Add page</button>
 </section>
 <section class="panel" aria-labelledby="preview-heading">

@@ -168,6 +168,22 @@ async function start(){
       }else{status('Structural report created. Existing draft unchanged.');}
       $('reference').value='';$('reference-authorized').checked=false;
     }));
+    $('visual-analyze').addEventListener('click',()=>run(async()=>{
+      const file=$('visual-file').files[0];
+      if(!file||!$('visual-authorized').checked)throw new Error('Select an authorized screenshot and confirm permission.');
+      const revision=draftRevision;
+      status('Analyzing screenshot locally…');
+      try{
+        const observations=await window.analyzeVisualReference(file);
+        if(revision!==draftRevision){status('Draft changed. Run screenshot analysis again.');return;}
+        const result=await(await request('/api/visual-reference',{observations,title:project.title,objective:project.description,authorized:true})).json();
+        if(revision!==draftRevision){status('Draft changed. Run screenshot analysis again.');return;}
+        $('visual-report').textContent=JSON.stringify({observations:result.observations,suggestions:result.suggestions,limitations:result.limitations},null,2);
+        if(confirm('Replace the current draft with this independently designed starter?')){
+          project=result.project;dirty();render();$('frame').srcdoc='';status('Screenshot-informed draft created. Review original content and layout.');
+        }else status('Visual report created. Existing draft unchanged.');
+      }finally{$('visual-file').value='';$('visual-authorized').checked=false;}
+    }));
     $('save').addEventListener('click',()=>{project.review=approvals();download(new Blob([JSON.stringify(project,null,2)],{type:'application/json'}),'project.json');status('Draft JSON saved.');});
     $('viewport').addEventListener('change',()=>$('frame').style.width=$('viewport').value);
     $('preview').addEventListener('click',()=>run(async()=>{status('Generating preview…');const r=await request('/api/preview',{spec:project,slug:$('preview-page').value});$('frame').srcdoc=(await r.json()).html;status('Preview generated. Test interactions after export.');}));

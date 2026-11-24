@@ -41,3 +41,8 @@ iframe { display: block; width: 100%; height: 570px; max-width: 100%; margin: au
 .release-gates li { border-bottom: 1px solid #d5dfe8; padding-block: .65rem; }
 .release-gates strong, .release-gates span { display: block; }
 .release-gates span { color: #526275; font-size: .85rem; }
+
+#visual-reference-panel { margin-block: 1.5rem; padding: .8rem; border: 1px solid #d5dfe8; border-radius: 8px; }
+#visual-reference-panel summary { font-weight: 700; cursor: pointer; }
+#visual-authorized { width: auto; }
+#visual-report { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 20rem; overflow: auto; font-size: .85rem; }
