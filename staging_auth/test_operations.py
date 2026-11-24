@@ -159,6 +159,9 @@ class BackupTests(TransactionTestCase):
             with self.assertRaises(CommandError):
                 call_command("backup_staging", recovery_copy=source, destination=Path(temp) / "bad.sqlite3", stdout=out)
             self.assertFalse((Path(temp) / "bad.sqlite3").exists())
+            with self.assertRaises(CommandError):
+                call_command("backup_staging", recovery_copy=snapshot, stdout=out)
+            self.assertEqual(snapshot.read_bytes(), before)
 
     def test_recovery_rejects_sidecars_and_invalid_snapshot(self):
         with tempfile.TemporaryDirectory() as temp:
