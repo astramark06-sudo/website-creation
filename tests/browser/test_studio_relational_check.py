@@ -43,6 +43,46 @@ class StudioRelationalCheckTests(unittest.TestCase):
                 finally:
                     browser.close()
 
+    def test_authenticated_report_and_consent(self):
+        result = {"status": "passed", "profile": "authenticated-local-staging", "engine": "firefox",
+                  "public_deployment": False, "checks": {"synthetic": True}}
+        with patch("scripts.creator_studio.check_authenticated", return_value=result) as check:
+            with tempfile.TemporaryDirectory() as tmp, sync_playwright() as pw, serve(lambda port: make_handler(port, "auth-check", browser_checks=True)) as url:
+                browser = launch_browser(pw)
+                try:
+                    page = browser.new_page(accept_downloads=True)
+                    page.goto(url)
+                    expect(page.locator("#status")).to_contain_text("Preview generated")
+                    page.locator("#relational-panel > summary").click()
+                    page.get_by_role("button", name="Load example schema", exact=True).click()
+                    page.locator("#relational-check-engine").select_option("firefox")
+                    button = page.get_by_role("button", name="Verify authenticated application", exact=True)
+                    page.once("dialog", lambda dialog: dialog.dismiss())
+                    button.click()
+                    self.assertEqual(check.call_count, 0)
+                    page.once("dialog", lambda dialog: dialog.accept())
+                    button.click()
+                    expect(page.locator("#relational-check-status")).to_contain_text("Passed")
+                    self.assertEqual(check.call_count, 1)
+                    self.assertEqual(check.call_args.args[2]["tables"][0]["id"], "categories")
+                    self.assertEqual(check.call_args.args[3], "firefox")
+                    save = page.get_by_role("button", name="Download application report", exact=True)
+                    with page.expect_download() as report:
+                        save.click()
+                    self.assertEqual(report.value.suggested_filename, "authenticated-report.json")
+                    target = Path(tmp) / "report.json"
+                    report.value.save_as(target)
+                    self.assertEqual(json.loads(target.read_text()), result)
+                    page.locator("#relational-check-engine").select_option("webkit")
+                    expect(save).to_be_disabled()
+                    expect(page.locator("#relational-check-status")).to_contain_text("Application changed")
+                    headers = {"Origin": url, "X-Creator-Token": "auth-check"}
+                    response = page.request.post(url + "/api/authenticated-check", headers=headers, data={"confirmed": False})
+                    self.assertEqual(response.status, 400)
+                    self.assertEqual(check.call_count, 1)
+                finally:
+                    browser.close()
+
     def test_disabled_by_default(self):
         with sync_playwright() as pw, serve(lambda port: make_handler(port, "disabled-check")) as url:
             browser = launch_browser(pw)
@@ -53,6 +93,9 @@ class StudioRelationalCheckTests(unittest.TestCase):
                 page.locator("#relational-panel > summary").click()
                 expect(page.locator("#relational-check-panel")).to_be_hidden()
                 response = page.request.post(url + "/api/relational-check", headers={"Origin": url, "X-Creator-Token": "disabled-check"},
+                                             data={"confirmed": True})
+                self.assertEqual(response.status, 403)
+                response = page.request.post(url + "/api/authenticated-check", headers={"Origin": url, "X-Creator-Token": "disabled-check"},
                                              data={"confirmed": True})
                 self.assertEqual(response.status, 403)
             finally:
