@@ -2,7 +2,7 @@
 import copy
 import unittest
 
-from scripts.creator_plan import load_catalog, plan, validate
+from scripts.creator_plan import load_catalog, plan, validate, search_sources
 
 
 class CreatorPlanTests(unittest.TestCase):
@@ -11,7 +11,7 @@ class CreatorPlanTests(unittest.TestCase):
 
     def test_catalog_valid(self):
         validate(self.sources, self.profiles, self.tools)
-        self.assertGreaterEqual(len(self.sources), 18)
+        self.assertGreaterEqual(len(self.sources), 31)
         self.assertEqual(len(self.profiles), 6)
 
     def test_plan_is_proposal_only(self):
@@ -38,6 +38,25 @@ class CreatorPlanTests(unittest.TestCase):
     def test_unreviewed_adoption_rejected(self):
         sources = copy.deepcopy(self.sources)
         sources[0]["adoption"] = "auto-install"
+        with self.assertRaises(ValueError):
+            validate(sources, self.profiles, self.tools)
+
+    def test_search_filters_reference_only(self):
+        found = search_sources(self.sources, "templates", "reference-only")
+        self.assertTrue(any(s["id"] == "framer-marketplace" for s in found))
+        self.assertTrue(all(s["import_policy"] == "reference-only" for s in found))
+
+    def test_metered_sources_never_auto_import(self):
+        sources = copy.deepcopy(self.sources)
+        source = next(s for s in sources if s["id"] == "21st-marketplace")
+        source["import_policy"] = "eligible-upstream-review"
+        with self.assertRaises(ValueError):
+            validate(sources, self.profiles, self.tools)
+
+    def test_reference_source_import_rejected(self):
+        sources = copy.deepcopy(self.sources)
+        source = next(s for s in sources if s["id"] == "framer-marketplace")
+        source["import_policy"] = "eligible-upstream-review"
         with self.assertRaises(ValueError):
             validate(sources, self.profiles, self.tools)
 

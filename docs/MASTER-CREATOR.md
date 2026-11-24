@@ -17,6 +17,7 @@ Use Python 3.10+ from the repository root:
 ```sh
 python scripts/creator_plan.py --validate
 python scripts/creator_plan.py --list
+python scripts/creator_plan.py --search dashboard --import-policy eligible-upstream-review
 python scripts/creator_plan.py --profile interactive --objective "A task dashboard"
 python -m unittest discover -s tests -v
 ```
@@ -35,3 +36,9 @@ After selection, implement project-owned tokens and components, confirm licenses
 - Add source-specific integrations only when their official APIs and terms permit the intended usage.
 - Add reusable original responsive templates and design tokens after a product scope is approved.
 - Add app-specific cross-browser, accessibility, performance and release gates after scaffolding.
+
+## Commercial and free template discovery
+
+The catalogue now includes 31 source records. Search by purpose and import policy, then open the original source. Reference-only providers cannot be imported. Metered providers use only official retrieval and current allowances. Upstream-review candidates require item-level license and asset checks. The catalogue stores original metadata and links only; it does not mirror template code or designs.
+
+For a standalone free stack, choose a reviewed static generator or frontend framework, original components or a permissively licensed upstream source, and local editing/build tools. Paid marketplace assets, paid export features and hosted AI credits are not dependencies. Reconstruct authorized sites with original code and user-owned content, not proprietary demos, branding or protected assets. Public previews cannot reveal private server logic.

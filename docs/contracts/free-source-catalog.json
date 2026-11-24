@@ -1,7 +1,7 @@
 {
   "version": 1,
   "review_date": "2026-11-24",
-  "policy": "Original source index only. No copied third-party source, previews, screenshots, prompts or assets. All item-level adoption requires a license and cost review.",
+  "policy": "Source references only. No mirrored marketplace content, copied previews, assets, prompts, or automatic imports. Free access is not redistribution permission. Verify terms and individual license before reuse; reference-only sources cannot be imported.",
   "sources": [
     {
       "id": "21st-marketplace",
@@ -15,7 +15,8 @@
         "components"
       ],
       "notes": "Official search is free; current free allowance is two code retrievals per day across clients. Check current terms and each item license. No mirroring.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "metered-official-only"
     },
     {
       "id": "shadcn-directory",
@@ -29,7 +30,8 @@
         "discovery"
       ],
       "notes": "Directory entries have separate licenses; verify selected upstream item.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "item-license-review"
     },
     {
       "id": "hyperui",
@@ -44,7 +46,8 @@
         "ecommerce"
       ],
       "notes": "MIT upstream; verify notices and revision before reuse.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
     },
     {
       "id": "merakiui",
@@ -58,7 +61,8 @@
         "marketing"
       ],
       "notes": "MIT upstream; check dependencies and notices.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
     },
     {
       "id": "ark-ui",
@@ -72,7 +76,8 @@
         "accessibility"
       ],
       "notes": "MIT upstream; alternative primitive layer, not a second default.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
     },
     {
       "id": "heroicons",
@@ -85,7 +90,8 @@
         "icons"
       ],
       "notes": "MIT upstream; use one coherent icon family.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
     },
     {
       "id": "preline",
@@ -99,7 +105,8 @@
         "marketing"
       ],
       "notes": "Dual license and separate Pro offering; only reviewed free items, no bulk redistribution.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "item-license-review"
     },
     {
       "id": "magic-ui",
@@ -113,7 +120,8 @@
         "motion"
       ],
       "notes": "Use verified free upstream items; paid templates excluded.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "item-license-review"
     },
     {
       "id": "react-bits",
@@ -127,7 +135,8 @@
         "motion"
       ],
       "notes": "Review upstream license and redistribution restrictions; no library mirror.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "item-license-review"
     },
     {
       "id": "motion-primitives",
@@ -141,7 +150,8 @@
         "motion"
       ],
       "notes": "Review selected revision and license before adoption.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
     },
     {
       "id": "design-tokens",
@@ -155,7 +165,8 @@
         "design"
       ],
       "notes": "Use format as reference; write project-owned token values.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "reference-only"
     },
     {
       "id": "style-dictionary",
@@ -169,7 +180,8 @@
         "design"
       ],
       "notes": "Optional token compilation; review current license/version.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
     },
     {
       "id": "pagefind",
@@ -183,7 +195,8 @@
         "content"
       ],
       "notes": "Static search candidate; check current license and version.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
     },
     {
       "id": "i18next",
@@ -196,7 +209,8 @@
         "localization"
       ],
       "notes": "Use only for multilingual requirements; no paid translation API.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
     },
     {
       "id": "vite-pwa",
@@ -209,7 +223,8 @@
         "pwa"
       ],
       "notes": "Optional offline/installable web app; validate cache updates.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
     },
     {
       "id": "web-vitals",
@@ -222,7 +237,8 @@
         "performance"
       ],
       "notes": "Local measurement; no third-party analytics transmission by default.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
     },
     {
       "id": "json-schema",
@@ -235,7 +251,8 @@
         "validation"
       ],
       "notes": "Use specification to validate project contracts.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "reference-only"
     },
     {
       "id": "penpot",
@@ -249,7 +266,225 @@
         "tokens"
       ],
       "notes": "Prefer local or documented free access; hosted limits vary.",
-      "adoption": "review-required"
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
+    },
+    {
+      "id": "start-bootstrap",
+      "name": "Start Bootstrap",
+      "url": "https://startbootstrap.com/themes",
+      "upstream": "https://startbootstrap.com/themes",
+      "license_url": "https://startbootstrap.com/licenses",
+      "access": "open-source",
+      "tags": [
+        "templates",
+        "marketing",
+        "dashboard",
+        "portfolio"
+      ],
+      "notes": "Free themes are MIT-licensed; premium products have separate terms. Review selected source and retain notices.",
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
+    },
+    {
+      "id": "html5-up",
+      "name": "HTML5 UP",
+      "url": "https://html5up.net/",
+      "upstream": "https://html5up.net/",
+      "license_url": "https://html5up.net/license",
+      "access": "open-source",
+      "tags": [
+        "templates",
+        "portfolio",
+        "marketing",
+        "static"
+      ],
+      "notes": "CC BY 3.0 templates; retain attribution and review separately licensed assets.",
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
+    },
+    {
+      "id": "flowbite-free",
+      "name": "Flowbite open-source",
+      "url": "https://flowbite.com/docs/getting-started/introduction/",
+      "upstream": "https://github.com/themesberg/flowbite",
+      "license_url": "https://flowbite.com/docs/getting-started/introduction/",
+      "access": "open-source",
+      "tags": [
+        "components",
+        "dashboard",
+        "marketing",
+        "ecommerce"
+      ],
+      "notes": "MIT core UI; Pro designs, icons and illustrations have separate conditions. Review exact item.",
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
+    },
+    {
+      "id": "tabler-dashboard",
+      "name": "Tabler UI",
+      "url": "https://tabler.io/",
+      "upstream": "https://github.com/tabler/tabler",
+      "license_url": "https://docs.tabler.io/ui/getting-started",
+      "access": "open-source",
+      "tags": [
+        "dashboard",
+        "templates",
+        "data-app"
+      ],
+      "notes": "MIT dashboard core; separate paid assets excluded.",
+      "adoption": "review-required",
+      "import_policy": "eligible-upstream-review"
+    },
+    {
+      "id": "astro-themes",
+      "name": "Astro theme directory",
+      "url": "https://astro.build/themes/",
+      "upstream": "https://astro.build/themes/1/?price%5B%5D=free",
+      "license_url": "https://astro.build/themes/",
+      "access": "mixed-directory",
+      "tags": [
+        "templates",
+        "blog",
+        "portfolio",
+        "static",
+        "documentation"
+      ],
+      "notes": "Filter free listings; each author and linked repository has independent licensing.",
+      "adoption": "review-required",
+      "import_policy": "item-license-review"
+    },
+    {
+      "id": "jekyll-themes",
+      "name": "Jekyll themes",
+      "url": "https://jekyllrb.com/docs/themes/",
+      "upstream": "https://jekyllrb.com/docs/themes/",
+      "license_url": "https://jekyllrb.com/docs/themes/",
+      "access": "mixed-directory",
+      "tags": [
+        "templates",
+        "blog",
+        "documentation",
+        "static"
+      ],
+      "notes": "Search linked upstream repositories; check individual licenses and Pages compatibility.",
+      "adoption": "review-required",
+      "import_policy": "item-license-review"
+    },
+    {
+      "id": "themesberg-free",
+      "name": "Themesberg free templates",
+      "url": "https://themesberg.com/templates/free",
+      "upstream": "https://themesberg.com/templates/free",
+      "license_url": "https://themesberg.com/templates/free",
+      "access": "mixed-directory",
+      "tags": [
+        "templates",
+        "dashboard",
+        "marketing"
+      ],
+      "notes": "Free listing is not blanket redistribution permission; review each upstream license.",
+      "adoption": "review-required",
+      "import_policy": "item-license-review"
+    },
+    {
+      "id": "freehtml5",
+      "name": "FreeHTML5.co",
+      "url": "https://freehtml5.co/",
+      "upstream": "https://freehtml5.co/faq/",
+      "license_url": "https://freehtml5.co/terms/",
+      "access": "mixed-directory",
+      "tags": [
+        "templates",
+        "static",
+        "portfolio"
+      ],
+      "notes": "Free templates CC BY 3.0 with attribution conditions; paid items excluded.",
+      "adoption": "review-required",
+      "import_policy": "item-license-review"
+    },
+    {
+      "id": "framer-marketplace",
+      "name": "Framer Marketplace",
+      "url": "https://www.framer.com/marketplace/templates/",
+      "upstream": "https://www.framer.com/help/articles/how-templates-work/",
+      "license_url": "https://www.framer.com/legal/community-terms/1.0",
+      "access": "reference",
+      "tags": [
+        "templates",
+        "marketing",
+        "portfolio",
+        "design"
+      ],
+      "notes": "Reference and permitted use in individual Framer projects only; no competing repository or library redistribution of free marketplace content.",
+      "adoption": "review-required",
+      "import_policy": "reference-only"
+    },
+    {
+      "id": "webflow-marketplace",
+      "name": "Webflow free templates",
+      "url": "https://webflow.com/templates/free-website-templates",
+      "upstream": "https://help.webflow.com/hc/en-us/articles/33961270477971-Webflow-templates-overview",
+      "license_url": "https://webflow.com/templates/template-licenses",
+      "access": "reference",
+      "tags": [
+        "templates",
+        "marketing",
+        "portfolio",
+        "design"
+      ],
+      "notes": "Review individual project license; no redistribution of marketplace templates. Export or hosting may require paid plans.",
+      "adoption": "review-required",
+      "import_policy": "reference-only"
+    },
+    {
+      "id": "tailwind-plus",
+      "name": "Tailwind Plus",
+      "url": "https://tailwindcss.com/plus",
+      "upstream": "https://tailwindcss.com/blog/tailwind-plus",
+      "license_url": "https://tailwindcss.com/plus/license",
+      "access": "reference",
+      "tags": [
+        "components",
+        "templates",
+        "marketing",
+        "dashboard"
+      ],
+      "notes": "Commercial products excluded from zero-spend imports; use Tailwind CSS and independently authored or reviewed free libraries instead.",
+      "adoption": "review-required",
+      "import_policy": "reference-only"
+    },
+    {
+      "id": "creative-tim",
+      "name": "Creative Tim",
+      "url": "https://www.creative-tim.com/",
+      "upstream": "https://www.creative-tim.com/license",
+      "license_url": "https://www.creative-tim.com/license",
+      "access": "mixed-directory",
+      "tags": [
+        "templates",
+        "dashboard",
+        "components"
+      ],
+      "notes": "Free upstream MIT items may be reviewed; commercial items and competing-template restrictions excluded.",
+      "adoption": "review-required",
+      "import_policy": "item-license-review"
+    },
+    {
+      "id": "bootstrapmade",
+      "name": "BootstrapMade",
+      "url": "https://bootstrapmade.com/",
+      "upstream": "https://bootstrapmade.com/license/",
+      "license_url": "https://bootstrapmade.com/license/",
+      "access": "reference",
+      "tags": [
+        "templates",
+        "static",
+        "marketing"
+      ],
+      "notes": "Free license is personal-project limited; no repository redistribution or generic commercial reuse.",
+      "adoption": "review-required",
+      "import_policy": "reference-only"
     }
   ]
 }

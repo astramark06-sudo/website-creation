@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1] / "docs" / "contracts"
 ACCESS = {"open-source", "mixed-directory", "metered-free", "reference"}
+IMPORT_POLICY = {"eligible-upstream-review", "item-license-review", "reference-only", "metered-official-only"}
 
 
 def load_catalog():
@@ -26,6 +27,12 @@ def validate(sources, profiles, tools):
             raise ValueError("Invalid source policy: " + s["id"])
         if not all(s[k].startswith("https://") for k in ("url", "upstream", "license_url")):
             raise ValueError("Missing HTTPS provenance: " + s["id"])
+        if s.get("import_policy") not in IMPORT_POLICY:
+            raise ValueError("Missing or invalid import policy: " + s["id"])
+        if s["access"] == "reference" and s["import_policy"] != "reference-only":
+            raise ValueError("Reference sources cannot be imported: " + s["id"])
+        if s["access"] == "metered-free" and s["import_policy"] != "metered-official-only":
+            raise ValueError("Metered sources require official retrieval: " + s["id"])
         if not s["tags"] or not s["notes"]:
             raise ValueError("Missing source metadata: " + s["id"])
     if len({p["id"] for p in profiles}) != len(profiles):
@@ -65,10 +72,25 @@ def plan(profile_id, objective, sources, profiles, tools):
     }
 
 
+def search_sources(sources, query, import_policy=None):
+    """Search our original metadata only, without contacting any provider."""
+    words = query.casefold().split()
+    if not words:
+        raise ValueError("A search term is required")
+    results = []
+    for source in sources:
+        haystack = " ".join([source["name"], source["id"], *source["tags"], source["notes"]]).casefold()
+        if all(word in haystack for word in words) and (import_policy is None or source["import_policy"] == import_policy):
+            results.append(source)
+    return sorted(results, key=lambda source: source["name"].casefold())
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--list", action="store_true", help="List website profiles")
     parser.add_argument("--validate", action="store_true", help="Validate catalog references")
+    parser.add_argument("--search", help="Search source metadata offline")
+    parser.add_argument("--import-policy", choices=sorted(IMPORT_POLICY))
     parser.add_argument("--profile")
     parser.add_argument("--objective")
     args = parser.parse_args()
@@ -79,10 +101,12 @@ def main():
             print(f"Validated {len(sources)} source records and {len(profiles)} profiles.")
         elif args.list:
             print(json.dumps(profiles, indent=2))
+        elif args.search is not None:
+            print(json.dumps(search_sources(sources, args.search, args.import_policy), indent=2))
         elif args.profile and args.objective:
             print(json.dumps(plan(args.profile, args.objective, sources, profiles, tools), indent=2))
         else:
-            parser.error("use --list, --validate, or --profile with --objective")
+            parser.error("use --list, --validate, --search, or --profile with --objective")
     except ValueError as exc:
         parser.error(str(exc))
 
