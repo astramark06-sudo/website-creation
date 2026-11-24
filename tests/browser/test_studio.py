@@ -86,6 +86,26 @@ class StudioBrowserTests(unittest.TestCase):
                 context.close()
                 browser.close()
 
+    def test_tool_center(self):
+        with sync_playwright() as pw, serve(lambda port: make_handler(port, "test-token")) as url:
+            browser = pw.chromium.launch()
+            try:
+                page = browser.new_page()
+                page.goto(url)
+                expect(page.locator("#status")).to_contain_text("Preview generated")
+                page.locator("#tool-center summary").click()
+                expect(page.locator("#tool-status")).to_have_text("Read-only catalogue ready.")
+                page.locator("#tool-profile").select_option("marketing")
+                page.get_by_role("button", name="Propose development plan").click()
+                expect(page.locator("#tool-results")).to_contain_text("proposal-only")
+                page.get_by_label("Search component sources").fill("templates")
+                page.get_by_label("Import policy").select_option("reference-only")
+                page.get_by_role("button", name="Search sources").click()
+                expect(page.locator("#tool-results")).to_contain_text("reference-only")
+                expect(page.locator("#tool-status")).to_contain_text("matching sources")
+            finally:
+                browser.close()
+
     def test_request_boundaries(self):
         with sync_playwright() as pw, serve(lambda port: make_handler(port, "test-token")) as url:
             request = pw.request.new_context()

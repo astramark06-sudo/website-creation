@@ -27,3 +27,7 @@ See the [official UTCP introduction](https://www.utcp.io/docs/), [protocols](htt
 ## Optional SDK interoperability
 
 The [local client configuration](../integrations/utcp/local-client.json) registers only the Master Creator HTTP discovery endpoint and restricts its transport to HTTP, following the [UTCP 1.1 protocol restriction guidance](https://www.utcp.io/migration-v1.0-to-v1.1). The pinned test packages are in [requirements-utcp-test.txt](../requirements-utcp-test.txt). They are optional for normal operation and do not require an API key. The SDK test uses a loopback server and calls all three native read-only tools; it does not call external providers. Check the CI result before claiming client compatibility.
+
+## Studio tool center
+
+The studio now uses the same read-only dispatch functions as the native UTCP provider. Open Tool and resource center to view catalogue counts, propose a development profile and search source metadata with an import-policy filter. This in-process connection does not require the standalone UTCP server or the optional SDK. External agents may still use the independently tested UTCP HTTP endpoint. The studio makes no remote provider requests; original links open only when selected by the user. The plan is a proposal and never installs tools, claims availability or publishes a website.

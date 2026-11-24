@@ -16,11 +16,13 @@ try:
     from .creator_reference import reference_plan
     from .creator_ai import generate_draft, valid_model
     from .creator_fullstack import export_fullstack
+    from .creator_tools import overview, query_tool, propose_plan
 except ImportError:
     from creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec
     from creator_reference import reference_plan
     from creator_ai import generate_draft, valid_model
     from creator_fullstack import export_fullstack
+    from creator_tools import overview, query_tool, propose_plan
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "studio"
@@ -111,7 +113,7 @@ def make_handler(port, token, ai_model=None):
             if self.headers.get("Origin") != origin or not secrets.compare_digest(self.headers.get("X-Creator-Token", ""), token):
                 self.send_json(403, {"error": "Local session required"})
                 return
-            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export"):
+            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/tool-query", "/api/tool-plan", "/api/tool-overview"):
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
@@ -128,6 +130,12 @@ def make_handler(port, token, ai_model=None):
                     if payload.get("confirmed") is not True:
                         raise ValueError("Local AI consent required")
                     self.send_json(200, {"project": generate_draft(payload["prompt"], ai_model)})
+                elif self.path == "/api/tool-overview":
+                    self.send_json(200, overview(port))
+                elif self.path == "/api/tool-query":
+                    self.send_json(200, query_tool(payload))
+                elif self.path == "/api/tool-plan":
+                    self.send_json(200, propose_plan(payload))
                 elif self.path == "/api/fullstack-export":
                     data = export_fullstack(payload["title"], payload["description"])
                     self.send_data(200, data, "application/zip", {"Content-Disposition": 'attachment; filename="local-data-workspace.zip"'})
