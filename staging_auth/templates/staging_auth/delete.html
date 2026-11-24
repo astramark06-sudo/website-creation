@@ -1,0 +1,3 @@
+{% extends "staging_auth/base.html" %}
+{% block title %}Confirm deletion{% endblock %}
+{% block content %}<section><h1>Delete record #{{ item_id }}?</h1><p>This removes the record and clears references to it in this workspace.</p><form method="post">{% csrf_token %}<div class="actions"><button type="submit" class="danger">Confirm deletion</button><a href="{% url 'collection' workspace.slug table.id %}">Cancel</a></div></form></section>{% endblock %}

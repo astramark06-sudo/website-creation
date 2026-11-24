@@ -1,0 +1,31 @@
+name: Authenticated staging integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  staging:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+      - name: Install optional staging framework
+        run: python -m pip install -r staging_auth/requirements.txt
+      - name: Check migration consistency
+        run: python -m django makemigrations --check --dry-run --settings=staging_auth.test_settings
+      - name: Test actual Django auth and scoped data
+        run: python -m django test staging_auth --settings=staging_auth.test_settings -v 2
+      - name: Check dependency compatibility
+        run: python -m pip check

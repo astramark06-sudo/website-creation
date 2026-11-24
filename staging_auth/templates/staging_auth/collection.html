@@ -1,0 +1,6 @@
+{% extends "staging_auth/base.html" %}
+{% block title %}{{ table.label }}{% endblock %}
+{% block content %}<p><a href="{% url 'workspace' workspace.slug %}">{{ workspace.title }}</a></p><h1>{{ table.label }}</h1>
+{% if form %}<section><h2>Add record</h2><form method="post">{% csrf_token %}{{ form.non_field_errors }}<div class="field-grid">{{ form.as_div }}</div><button type="submit">Add record</button></form></section>{% endif %}
+<section><h2>Records ({{ rows|length }})</h2><div class="record-grid">{% for row in rows %}<article><h3>Record #{{ row.id }}</h3><dl>{% for field in row.fields %}<dt>{{ field.label }}</dt><dd>{{ field.value }}</dd>{% endfor %}</dl>
+<div class="actions">{% if can_edit %}<a href="{% url 'edit-record' workspace.slug table.id row.id %}">Edit record #{{ row.id }}</a>{% endif %}{% if can_delete %}<a href="{% url 'delete-record' workspace.slug table.id row.id %}">Delete record #{{ row.id }}</a>{% endif %}</div></article>{% empty %}<p>No records in this table.</p>{% endfor %}</div></section>{% endblock %}

@@ -1,0 +1,7 @@
+{% extends "staging_auth/base.html" %}
+{% block title %}Your workspaces{% endblock %}
+{% block content %}
+<section><h1>Authenticated local staging</h1>
+{% if user.is_authenticated %}<h2>Your workspaces</h2><ul>{% for workspace in workspaces %}<li><a href="{% url 'workspace' workspace.slug %}">{{ workspace.title }}</a></li>{% empty %}<li>No active memberships.</li>{% endfor %}</ul>
+{% else %}<p><a href="{% url 'login' %}">Sign in</a></p>{% endif %}</section>
+{% endblock %}

@@ -1,0 +1,3 @@
+{% extends "staging_auth/base.html" %}
+{% block title %}Edit record{% endblock %}
+{% block content %}<section><p><a href="{% url 'collection' workspace.slug table.id %}">{{ table.label }}</a></p><h1>Edit record #{{ item_id }}</h1><form method="post">{% csrf_token %}{{ form.as_div }}<button type="submit">Save record</button></form></section>{% endblock %}
