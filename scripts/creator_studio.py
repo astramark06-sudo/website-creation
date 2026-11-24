@@ -49,7 +49,7 @@ def preview_document(spec, slug):
     name = "index.html" if slug == "home" else slug + ".html"
     page = files[name].replace('<link rel="stylesheet" href="style.css">', "<style>" + files["style.css"] + "</style>")
     # The preview is inert: no scripts, navigable links or form submissions.
-    return page.replace('<script src="app.js" defer></script>', "").replace('href="', 'data-preview-href="')
+    return page.replace('<script src="app.js" defer></script>', "").replace('<script src="search.js" defer></script>', "").replace('href="', 'data-preview-href="')
 
 
 def export_zip(spec):

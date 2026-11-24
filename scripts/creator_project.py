@@ -15,14 +15,16 @@ try:
     from .creator_build import CSS, JS, THEMES, inspect_html
     from .creator_design import design_for, design_css
     from .creator_components import validate_component, render_component, component_css
+    from .creator_search import SEARCH_PANEL, SEARCH_CSS, SEARCH_JS
 except ImportError:
     from creator_build import CSS, JS, THEMES, inspect_html
     from creator_design import design_for, design_css
     from creator_components import validate_component, render_component, component_css
+    from creator_search import SEARCH_PANEL, SEARCH_CSS, SEARCH_JS
 
 MAX_SPEC = 128 * 1024
 SLUG = re.compile(r"[a-z][a-z0-9-]{0,47}\Z")
-RESERVED = {"index", "style", "app", "creator-manifest", "favicon"}
+RESERVED = {"index", "style", "app", "creator-manifest", "favicon", "search"}
 FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#09645e"/><path d="M8 9h16v5H8zm0 9h7v5H8zm11 0h5v5h-5z" fill="white"/></svg>\n'
 
 
@@ -75,7 +77,7 @@ def validate_spec(spec, publish=False):
         seen.add(slug)
         require_text(page["title"], "Page title", 120)
         require_text(page["intro"], "Page introduction", 1000)
-        if page["interaction"] not in ("none", "tasks"):
+        if page["interaction"] not in ("none", "tasks", "search"):
             raise ValueError("Unsupported interaction")
         sections = page["sections"]
         if not isinstance(sections, list) or not 1 <= len(sections) <= 12:
@@ -111,7 +113,9 @@ def render_page(spec, page):
     nav = "".join(nav_items)
     cards = "".join(render_component(section) for section in page["sections"])
     tasks = page["interaction"] == "tasks"
-    script = '<script src="app.js" defer></script>' if tasks else ""
+    search = page["interaction"] == "search"
+    script = '<script src="app.js" defer></script>' if tasks else '<script src="search.js" defer></script>' if search else ""
+    section_id = ' id="page-sections"' if search else ""
     return f"""<!doctype html>
 <html lang="en">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -122,7 +126,7 @@ def render_page(spec, page):
 <body><a class="skip" href="#main">Skip to content</a>
 <header><div class="wrap nav"><strong>{e(spec["title"])}</strong><nav aria-label="Main navigation">{nav}</nav></div></header>
 <main class="wrap" id="main" tabindex="-1"><section class="hero"><h1>{e(page["title"])}</h1><p>{e(page["intro"])}</p></section>
-<section aria-label="Page sections" class="grid">{cards}</section>
+{SEARCH_PANEL if search else ""}<section{section_id} aria-label="Page sections" class="grid">{cards}</section>
 {TASKS if tasks else ""}</main>
 <footer><div class="wrap">{e(spec["title"])}</div></footer></body></html>
 """
@@ -138,6 +142,9 @@ def assemble(spec):
     files["style.css"] = CSS.replace("ACCENT", THEMES[spec["theme"]]) + design_css(spec) + component_css(spec)
     if any(p["interaction"] == "tasks" for p in spec["pages"]):
         files["app.js"] = JS
+    if any(p["interaction"] == "search" for p in spec["pages"]):
+        files["search.js"] = SEARCH_JS
+        files["style.css"] += SEARCH_CSS
     files["favicon.svg"] = FAVICON
     files[".nojekyll"] = ""
     return files
