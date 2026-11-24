@@ -21,6 +21,32 @@ def verify_snapshot(db):
         raise ValueError("Not an initialized current staging database")
 
 
+def snapshot_report(db):
+    verify_snapshot(db)
+    if db.execute("SELECT count(*) FROM django_session").fetchone()[0] != 0:
+        raise ValueError("Snapshot retained sessions")
+    return {
+        "workspaces": db.execute("SELECT count(*) FROM staging_auth_workspace").fetchone()[0],
+        "records": db.execute("SELECT count(*) FROM staging_auth_record").fetchone()[0],
+        "sessions_retained": 0,
+    }
+
+
+def check_backup(source):
+    """Check an offline, private snapshot without opening it for writes."""
+    source = Path(source).resolve()
+    if not source.is_file() or source.suffix != ".sqlite3":
+        raise ValueError("Choose an existing offline .sqlite3 snapshot")
+    if any(os.path.lexists(str(source) + suffix) for suffix in ("-wal", "-shm", "-journal")):
+        raise ValueError("Snapshot has SQLite sidecar files; stop and review it")
+    # Immutable mode is appropriate only for a stopped, standalone snapshot.
+    # It prevents writes, locking, and creation of SQLite sidecar files.
+    with closing(sqlite3.connect(source.as_uri() + "?mode=ro&immutable=1", uri=True, timeout=5)) as db:
+        db.execute("PRAGMA query_only = ON")
+        db.execute("PRAGMA trusted_schema = OFF")
+        return snapshot_report(db)
+
+
 def backup_staging(source, destination):
     source, destination = Path(source), Path(destination)
     if not source.is_file() or destination.suffix != ".sqlite3":
@@ -39,14 +65,7 @@ def backup_staging(source, destination):
                 with copy:
                     copy.execute("DELETE FROM django_session")
                 copy.execute("VACUUM")
-                verify_snapshot(copy)
-                if copy.execute("SELECT count(*) FROM django_session").fetchone()[0] != 0:
-                    raise ValueError("Snapshot retained sessions")
-                report = {
-                    "workspaces": copy.execute("SELECT count(*) FROM staging_auth_workspace").fetchone()[0],
-                    "records": copy.execute("SELECT count(*) FROM staging_auth_record").fetchone()[0],
-                    "sessions_retained": 0,
-                }
+                report = snapshot_report(copy)
     except BaseException:
         destination.unlink()
         raise
