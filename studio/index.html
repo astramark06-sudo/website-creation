@@ -16,6 +16,12 @@
 <label>Description<textarea id="description" rows="3" maxlength="1000"></textarea></label>
 <label>Color theme<select id="theme"><option value="teal">Teal</option><option value="blue">Blue</option><option value="plum">Plum</option></select></label>
 <div class="actions"><button id="new">New project</button><label>Import JSON<input id="import" type="file" accept=".json,application/json"></label><button id="save">Save JSON</button></div>
+<h2>Reference analysis</h2>
+<p>Use an authorized saved HTML file for structural hints. The source is not executed, copied into the draft or retained.</p>
+<label>Local HTML reference<input id="reference" type="file" accept=".html,.htm,text/html"></label>
+<label><span><input id="reference-authorized" type="checkbox" style="width:auto"> I have permission to analyze this reference.</span></label>
+<button id="analyze-reference" type="button">Analyze reference and propose draft</button>
+<pre id="reference-report" style="white-space:pre-wrap;overflow-wrap:anywhere" aria-live="polite"></pre>
 <h2>Pages</h2><div id="pages"></div><button id="add-page">Add page</button>
 </section>
 <section class="panel" aria-labelledby="preview-heading">

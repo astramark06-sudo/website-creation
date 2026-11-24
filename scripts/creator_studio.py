@@ -13,8 +13,10 @@ import zipfile
 
 try:
     from .creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec
+    from .creator_reference import reference_plan
 except ImportError:
     from creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec
+    from creator_reference import reference_plan
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "studio"
@@ -101,7 +103,7 @@ def make_handler(port, token):
             if self.headers.get("Origin") != origin or not secrets.compare_digest(self.headers.get("X-Creator-Token", ""), token):
                 self.send_json(403, {"error": "Local session required"})
                 return
-            if self.path not in ("/api/preview", "/api/export"):
+            if self.path not in ("/api/preview", "/api/export", "/api/reference"):
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
@@ -111,7 +113,9 @@ def make_handler(port, token):
                 if not 0 < length <= MAX_SPEC:
                     raise ValueError("Invalid request size")
                 payload = json.loads(self.rfile.read(length).decode("utf-8"))
-                if self.path == "/api/preview":
+                if self.path == "/api/reference":
+                    self.send_json(200, reference_plan(payload["source"], payload["title"], payload["objective"], payload["authorized"]))
+                elif self.path == "/api/preview":
                     self.send_json(200, {"html": preview_document(payload["spec"], payload["slug"])})
                 else:
                     data = export_zip(payload["spec"])
