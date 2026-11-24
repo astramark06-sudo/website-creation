@@ -1,12 +1,12 @@
 'use strict';
 const $ = id => document.getElementById(id);
-let project, token, busy = false;
+let project, token, busy = false, latestRelease = null, draftRevision = 0;
 const status = text => { $('status').textContent = text; };
 const defaultDesign = () => ({layout:'grid',typeface:'system',density:'comfortable',surface:'rounded'});
 const approvals = () => ({content_rights_confirmed:false, originality_reviewed:false, publish_approved:false});
 const blank = slug => ({slug,title:slug==='home'?'Home':'New page',intro:'Write an original introduction.',sections:[{heading:'Section',body:'Add original content.'}],interaction:'none'});
 const fresh = () => ({version:1,title:'My website',description:'Describe your website.',theme:'teal',pages:[blank('home')],review:approvals()});
-function dirty(){project.review=approvals();status('Draft changed. Refresh preview or export.');}
+function dirty(){project.review=approvals();draftRevision++;latestRelease=null;$('release-save').disabled=true;$('release-results').replaceChildren();$('release-status').textContent='Draft changed. Run a new release check.';status('Draft changed. Refresh preview or export.');}
 function action(parent,label,fn){
   const b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',fn);parent.append(b);
 }
@@ -35,8 +35,21 @@ function render(){
     field(card,'Interaction',p.interaction,v=>p.interaction=v,{choices:['none','tasks']});
     p.sections.forEach((s,j)=>{
       const block=document.createElement('div');block.className='section-card';
+      field(block,'Component type',s.kind||'card',v=>{s.kind=v;render();},{choices:['card','article','callout','faq','list','steps']});
       field(block,'Section heading',s.heading,v=>s.heading=v,{max:120});
       field(block,'Section body',s.body,v=>s.body=v,{multiline:true,max:4000});
+      if(['list','steps'].includes(s.kind)){
+        const hint=document.createElement('p');hint.className='section-hint';hint.textContent='One item per line (up to 30).';block.append(hint);
+      }
+      const handle=document.createElement('button');handle.type='button';handle.className='drag-handle';handle.draggable=true;handle.textContent='Drag to reorder';handle.setAttribute('aria-label','Drag section '+(j+1)+' to reorder; use move buttons for keyboard ordering');
+      handle.addEventListener('dragstart',event=>{event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',JSON.stringify({page:i,section:j}));});
+      block.addEventListener('dragover',event=>{event.preventDefault();event.dataTransfer.dropEffect='move';});
+      block.addEventListener('drop',event=>{event.preventDefault();try{
+        const move=JSON.parse(event.dataTransfer.getData('text/plain'));
+        if(!move||move.page!==i||!Number.isInteger(move.section)||move.section<0||move.section>=p.sections.length||move.section===j)return;
+        const [item]=p.sections.splice(move.section,1);p.sections.splice(j,0,item);dirty();render();
+      }catch(_){/* Ignore unrelated dragged data. */}});
+      block.append(handle);
       if(j>0)action(block,'Move section up',()=>{[p.sections[j-1],p.sections[j]]=[p.sections[j],p.sections[j-1]];dirty();render();});
       if(j<p.sections.length-1)action(block,'Move section down',()=>{[p.sections[j+1],p.sections[j]]=[p.sections[j],p.sections[j+1]];dirty();render();});
       if(p.sections.length>1)action(block,'Remove section',()=>{p.sections.splice(j,1);dirty();render();});
@@ -108,6 +121,17 @@ function initToolCenter(){
     showSources(result.sources);toolStatus(result.sources.length+' matching sources. Review individual terms and licenses.');
   }));
 }
+function renderRelease(report){
+  const host=$('release-results');host.replaceChildren();
+  const summary=document.createElement('p');summary.textContent=report.pages+' pages · '+report.generated_files+' generated files. Publication readiness not established.';host.append(summary);
+  const list=document.createElement('ul');list.className='release-gates';
+  for(const gate of report.gates){
+    const li=document.createElement('li'),title=document.createElement('strong'),evidence=document.createElement('span');
+    title.textContent=gate.name+' — '+gate.status;evidence.textContent=gate.evidence;li.append(title,evidence);list.append(li);
+  }
+  host.append(list);
+  for(const warning of [...report.warnings,...report.limitations]){const p=document.createElement('p');p.className='section-hint';p.textContent=warning;host.append(p);}
+}
 async function start(){
   try{
     const response=await fetch('/api/session');
@@ -148,6 +172,20 @@ async function start(){
     $('viewport').addEventListener('change',()=>$('frame').style.width=$('viewport').value);
     $('preview').addEventListener('click',()=>run(async()=>{status('Generating preview…');const r=await request('/api/preview',{spec:project,slug:$('preview-page').value});$('frame').srcdoc=(await r.json()).html;status('Preview generated. Test interactions after export.');}));
     $('export').addEventListener('click',()=>run(async()=>{status('Building draft…');const r=await request('/api/export',{spec:project});download(await r.blob(),'creator-project.zip');status('Verified draft exported. Nothing published.');}));
+    $('release-check').addEventListener('click',()=>run(async()=>{
+      const revision=draftRevision;
+      $('release-save').disabled=true;latestRelease=null;$('release-results').replaceChildren();
+      $('release-status').textContent='Checking this draft…';
+      try{
+        const result=await(await request('/api/release-report',{spec:project})).json();
+        if(revision!==draftRevision)return;
+        latestRelease=result;renderRelease(result);$('release-save').disabled=false;
+        $('release-status').textContent='Report generated. Human and project-specific testing gates remain.';
+      }catch(e){if(revision===draftRevision)$('release-status').textContent='Release check failed: '+e.message;throw e;}
+    }));
+    $('release-save').addEventListener('click',()=>{
+      if(latestRelease)download(new Blob([JSON.stringify(latestRelease,null,2)],{type:'application/json'}),'creator-release-report.json');
+    });
     $('fullstack-export').addEventListener('click',()=>run(async()=>{status('Building local database app…');const r=await request('/api/fullstack-export',{title:project.title,description:project.description});download(await r.blob(),'local-data-workspace.zip');status('Local database app exported. Run server.py in the extracted folder.');}));
     status('Ready.');$('preview').click();
   }catch(e){status('Unable to load studio: '+e.message);}
