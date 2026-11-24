@@ -20,7 +20,7 @@ class RelationalDesignerTests(unittest.TestCase):
                 page = context.new_page()
                 page.goto(url)
                 expect(page.locator("#status")).to_contain_text("Preview generated")
-                page.locator("#relational-panel summary").first.click()
+                page.locator("#relational-panel > summary").click()
                 page.get_by_role("button", name="Load example schema", exact=True).click()
                 tables = page.locator(".relational-table")
                 expect(tables).to_have_count(2)
