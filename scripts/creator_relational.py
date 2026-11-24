@@ -9,10 +9,25 @@ from pathlib import Path
 import re
 import sqlite3
 
-try:
-    from .creator_project import require_text, unique_object, reject_constant
-except ImportError:
-    from creator_project import require_text, unique_object, reject_constant
+# Standalone validation so the same engine can run inside an exported application.
+def require_text(value, label, limit):
+    if (not isinstance(value, str) or not value.strip() or len(value) > limit
+            or any(ord(c) < 32 and c not in "\t\n\r" or 0xD800 <= ord(c) <= 0xDFFF for c in value)):
+        raise ValueError(f"Invalid {label}")
+    return value.strip()
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("Duplicate JSON field")
+        result[key] = value
+    return result
+
+
+def reject_constant(value):
+    raise ValueError("Non-finite JSON number")
 
 LIMIT = 1000
 MAX_ID = 2**53 - 1  # Exact round-trip through a future JavaScript client.
@@ -77,7 +92,10 @@ def validate_schema(schema):
     if not set(relations) <= ids:
         raise ValueError("Unknown relation target")
     # Round-trip to detach validated definitions from caller-owned mutable objects.
-    return json.loads(canonical(schema))
+    serialized = canonical(schema)
+    if len(serialized.encode('utf-8')) > 32768:
+        raise ValueError('Schema exceeds 32 KiB')
+    return json.loads(serialized)
 
 
 def canonical(schema):

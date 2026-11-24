@@ -1,0 +1,7 @@
+*{box-sizing:border-box} body{margin:0;background:#eef2f6;color:#182332;font:1rem/1.55 system-ui,sans-serif} main{width:min(100% - 2rem,68rem);margin:2rem auto} header,section{background:white;border:1px solid #d7dfe8;border-radius:12px;padding:1.5rem;margin-bottom:1rem} header p:first-child{font-size:.8rem;color:#09645e;font-weight:700;letter-spacing:.1em} h1{font-size:clamp(1.8rem,5vw,3rem);overflow-wrap:anywhere} form{display:flex;gap:.75rem;flex-wrap:wrap;align-items:end} label{display:grid;gap:.3rem;flex:1 1 14rem} input,textarea,select,button{font:inherit;padding:.65rem;border:1px solid #738296;border-radius:6px;min-width:0} button{background:#09645e;color:white;cursor:pointer} :focus-visible{outline:3px solid #164a9b;outline-offset:3px} ul{list-style:none;padding:0} li{border-top:1px solid #d7dfe8;padding:1rem 0;overflow-wrap:anywhere} li button{margin:.25rem .5rem .25rem 0} .completed{text-decoration:line-through} textarea{resize:vertical}
+
+#fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr));gap:.75rem;flex:1 1 100%;min-width:0}
+#table{width:100%;max-width:28rem} label,select{min-width:0;max-width:100%;overflow-wrap:anywhere}
+#records dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr);gap:.3rem 1rem}
+#records dd{margin:0;overflow-wrap:anywhere} button:disabled{opacity:.65;cursor:wait}
+[hidden]{display:none!important} @media(max-width:420px){header,section{padding:1rem}}

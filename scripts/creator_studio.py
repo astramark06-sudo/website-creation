@@ -16,6 +16,7 @@ try:
     from .creator_reference import reference_plan
     from .creator_ai import generate_draft, valid_model
     from .creator_fullstack import export_fullstack
+    from .creator_relational_export import export_relational
     from .creator_tools import overview, query_tool, propose_plan
     from .creator_release import release_report
     from .creator_browser import check_browser
@@ -25,6 +26,7 @@ except ImportError:
     from creator_reference import reference_plan
     from creator_ai import generate_draft, valid_model
     from creator_fullstack import export_fullstack
+    from creator_relational_export import export_relational
     from creator_tools import overview, query_tool, propose_plan
     from creator_release import release_report
     from creator_browser import check_browser
@@ -120,7 +122,7 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
             if self.headers.get("Origin") != origin or not secrets.compare_digest(self.headers.get("X-Creator-Token", ""), token):
                 self.send_json(403, {"error": "Local session required"})
                 return
-            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check", "/api/visual-reference"):
+            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/relational-export", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check", "/api/visual-reference"):
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
@@ -156,6 +158,11 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
                     self.send_json(200, query_tool(payload))
                 elif self.path == "/api/tool-plan":
                     self.send_json(200, propose_plan(payload))
+                elif self.path == "/api/relational-export":
+                    if set(payload) != {"title", "description", "schema"}:
+                        raise ValueError("Invalid relational export fields")
+                    data = export_relational(payload["title"], payload["description"], payload["schema"])
+                    self.send_data(200, data, "application/zip", {"Content-Disposition": 'attachment; filename="local-relational-workspace.zip"'})
                 elif self.path == "/api/fullstack-export":
                     data = export_fullstack(payload["title"], payload["description"], payload.get("model", "records"), payload.get("fields"))
                     self.send_data(200, data, "application/zip", {"Content-Disposition": 'attachment; filename="local-data-workspace.zip"'})

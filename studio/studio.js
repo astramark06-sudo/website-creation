@@ -246,6 +246,14 @@ async function start(){
       const r=await request('/api/fullstack-export',payload);download(await r.blob(),'local-data-workspace.zip');
       status('Local database app exported. Run server.py in the extracted folder.');
     }));
+    $('relational-example').addEventListener('click',()=>{$('relational-schema').value=JSON.stringify({"version":1,"tables":[{"id":"categories","label":"Categories","fields":[{"id":"name","label":"Name","type":"text"}]},{"id":"items","label":"Items","fields":[{"id":"name","label":"Name","type":"text"},{"id":"quantity","label":"Quantity","type":"integer"},{"id":"state","label":"State","type":"choice","choices":["Available","Archived"]},{"id":"category","label":"Category","type":"relation","target":"categories"}]}]},null,2);});
+    $('relational-export').addEventListener('click',()=>run(async()=>{
+      const schema=JSON.parse($('relational-schema').value);
+      status('Building relational database app…');
+      const r=await request('/api/relational-export',{title:project.title,description:project.description,schema});
+      download(await r.blob(),'local-relational-workspace.zip');
+      status('Relational database app exported. Run server.py in the extracted folder.');
+    }));
     status('Ready.');$('preview').click();
   }catch(e){status('Unable to load studio: '+e.message);}
 }
