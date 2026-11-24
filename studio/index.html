@@ -42,9 +42,9 @@
 <div id="tool-results" class="tool-results"></div>
 </details>
 <h2>Reference analysis</h2>
-<p>Use an authorized saved HTML file for structural hints. The source is not executed, copied into the draft or retained.</p>
-<label>Local HTML reference<input id="reference" type="file" accept=".html,.htm,text/html"></label>
-<label><span><input id="reference-authorized" type="checkbox" style="width:auto"> I have permission to analyze this reference.</span></label>
+<p>Use one to five authorized saved HTML pages (64 KiB total) for structural hints. Multiple files propose generic draft pages in selection order. Source names, text and assets are not copied; source HTML is not executed or retained.</p>
+<label>Local HTML reference<input id="reference" type="file" accept=".html,.htm,text/html" multiple></label>
+<label><span><input id="reference-authorized" type="checkbox" style="width:auto"> I have permission to analyze every selected reference.</span></label>
 <button id="analyze-reference" type="button">Analyze reference and propose draft</button>
 <pre id="reference-report" style="white-space:pre-wrap;overflow-wrap:anywhere" aria-live="polite"></pre>
 <details id="visual-reference-panel">
