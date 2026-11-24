@@ -33,7 +33,20 @@ def read_spec(path: Path) -> dict:
         data = stream.read(MAX_SPEC + 1)
     if len(data) > MAX_SPEC:
         raise ValueError("Project specification exceeds 128 KiB")
-    return json.loads(data.decode("utf-8"))
+    return json.loads(data.decode("utf-8"), object_pairs_hook=unique_object, parse_constant=reject_constant)
+
+
+def unique_object(pairs):
+    value = {}
+    for key, item in pairs:
+        if key in value:
+            raise ValueError("Duplicate JSON field")
+        value[key] = item
+    return value
+
+
+def reject_constant(value):
+    raise ValueError("Non-finite JSON number")
 
 
 def require_text(value, label, limit):
@@ -198,7 +211,10 @@ def verify(spec, out, publish=False):
     if spec_bytes(manifest) != spec_bytes(expected_manifest(spec, expected)):
         raise ValueError("Manifest does not match the project")
     for name, body in expected.items():
-        if (out / name).read_bytes() != body.encode("utf-8"):
+        data = body.encode("utf-8")
+        with (out / name).open("rb") as stream:
+            actual = stream.read(len(data) + 1)
+        if actual != data:
             raise ValueError("Generated file differs from original build: " + name)
         if name.endswith(".html"):
             report = inspect_html(body)

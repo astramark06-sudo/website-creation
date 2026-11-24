@@ -61,6 +61,14 @@ class ReliabilityTests(unittest.TestCase):
                 path.write_bytes(data)
                 validate_spec(read_spec(path))
 
+    def test_ambiguous_json_is_rejected(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "ambiguous.json"
+            for source in ('{"version":1,"version":2}', '{"number":NaN}', '{"number":Infinity}'):
+                path.write_text(source, encoding="utf-8")
+                with self.subTest(source=source), self.assertRaises(ValueError):
+                    read_spec(path)
+
     def test_invalid_text_and_theme(self):
         for value in ("Title\x00", "\ud800"):
             with self.subTest(value=repr(value)):

@@ -27,3 +27,5 @@ The generated site includes an original local favicon and an explicitly focusabl
 ## Reliability boundaries
 
 Project validation enforces a canonical UTF-8 size limit in addition to input file limits. Generated filenames reject reserved Windows device names. Exported draft JSON uses compact UTF-8 to preserve the project size bound. Integrity verification compares the complete manifest against the expected manifest, not only generated file hashes. The starter-content report includes the exact HTML-reference and screenshot-reference template wording. Search smoke tests now include a positive heading match as well as empty results and clearing. These checks do not independently certify content rights or completeness.
+
+JSON input rejects duplicate object keys and non-finite numbers. Generated file comparison reads at most the expected file length plus one byte. Studio requests allow a small envelope around the separately validated project size limit. Browser regression coverage includes matching across neighboring metric label/value elements and Unicode canonical equivalence.

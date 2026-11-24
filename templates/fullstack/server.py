@@ -345,7 +345,9 @@ def handler(port, token, db_path):
                     if not secrets.compare_digest(self.headers.get("X-Workspace-Token", ""), token):
                         self.reply(403, {"error": "Invalid session"})
                         return
-                    params = parse_qs(parsed.query, max_num_fields=4)
+                    params = parse_qs(parsed.query, keep_blank_values=True, max_num_fields=3)
+                    if set(params) - {"q", "state", "stage"} or any(len(v) != 1 for v in params.values()):
+                        raise ValueError("Invalid filters")
                     items = list_items(db_path, params.get("q", [""])[0], params.get("state", ["all"])[0], fields, params.get("stage", [None])[0])
                     self.reply(200, {
                         "items": items,
