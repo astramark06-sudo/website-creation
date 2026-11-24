@@ -290,6 +290,103 @@ def backup_database(source, destination, fields=None):
     return destination
 
 
+def migration_plan(old_fields, new_fields, defaults):
+    """Only append fields; no destructive or implicit conversions."""
+    old_fields, new_fields = validate_fields(old_fields), validate_fields(new_fields)
+    if len(new_fields) <= len(old_fields) or new_fields[:len(old_fields)] != old_fields:
+        raise ValueError("Migration must append fields without changing existing definitions")
+    added = new_fields[len(old_fields):]
+    if not isinstance(defaults, dict) or set(defaults) != {f["id"] for f in added}:
+        raise ValueError("Provide an explicit default for each added field, and no others")
+    scalar, links = split_details(added, defaults)
+    for field in added:
+        name = field["id"]
+        if field["type"] == "link" and links[name] is not None:
+            raise ValueError("New link fields must default to null")
+        if field["type"] == "stage" and scalar[name] != field["choices"][0]:
+            raise ValueError("New workflow fields must default to the first stage")
+    return scalar
+
+
+def migrate_database(source, destination, old_fields, new_fields, defaults):
+    """Copy a stopped, trusted local workspace; never mutate the source database."""
+    migration_plan(old_fields, new_fields, defaults)
+    source, destination = Path(source), Path(destination)
+    if not source.is_file():
+        raise ValueError("No source workspace database")
+    if destination.suffix != ".sqlite3":
+        raise ValueError("Use a .sqlite3 destination filename")
+    # Reserve a new path atomically. Never open the source in write mode.
+    fd = os.open(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    os.close(fd)
+    try:
+        with closing(sqlite3.connect(source.resolve().as_uri() + "?mode=ro", uri=True, timeout=5)) as original:
+            with closing(sqlite3.connect(destination, timeout=5)) as target:
+                original.backup(target)
+        # Initialization, integrity and schema checks operate only on the copy.
+        with closing(database(destination, old_fields)) as db:
+            if [row[0] for row in db.execute("PRAGMA integrity_check")] != ["ok"]:
+                raise ValueError("Source snapshot failed integrity verification")
+            if db.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                raise ValueError("Source snapshot has invalid relationships")
+            count = db.execute("SELECT count(*) FROM items").fetchone()[0]
+            if count > LIMIT:
+                raise ValueError("Workspace exceeds supported record limit")
+        before = list_items(destination, fields=old_fields)
+        if len(before) != count:
+            raise ValueError("Source records could not be validated")
+        with closing(database(destination, old_fields)) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            for item in before:
+                details = item.get("details", {})
+                merged = {**details, **defaults}
+                scalar, _ = split_details(new_fields, merged, db, item["id"])
+                db.execute("INSERT INTO item_details(item_id,data) VALUES (?,?) "
+                           "ON CONFLICT(item_id) DO UPDATE SET data=excluded.data",
+                           (item["id"], json.dumps(scalar, ensure_ascii=False, sort_keys=True)))
+            definition = json.dumps(new_fields, sort_keys=True, separators=(",", ":"))
+            db.execute("UPDATE model_schema SET definition=? WHERE id=1", (definition,))
+        after = list_items(destination, fields=new_fields)
+        expected = []
+        for item in before:
+            record = dict(item)
+            record["details"] = {**item.get("details", {}), **defaults}
+            record["links"] = {**item.get("links", {}), **{
+                f["id"]: None for f in new_fields[len(old_fields):] if f["type"] == "link"
+            }}
+            expected.append(record)
+        if after != expected:
+            raise ValueError("Migrated records do not match the source and defaults")
+        with closing(database(destination, new_fields)) as db:
+            if [row[0] for row in db.execute("PRAGMA integrity_check")] != ["ok"] or db.execute("PRAGMA foreign_key_check").fetchone() is not None:
+                raise ValueError("Migrated database failed integrity verification")
+    except BaseException:
+        destination.unlink()
+        raise
+    return {"records": count, "added_fields": len(new_fields) - len(old_fields)}
+
+
+def read_migration_json(path):
+    """Read a bounded, unambiguous local configuration or defaults object."""
+    with Path(path).open("rb") as stream:
+        raw = stream.read(32 * 1024 + 1)
+    if len(raw) > 32 * 1024:
+        raise ValueError("Migration input exceeds 32 KiB")
+    def unique(pairs):
+        result = {}
+        for key, value in pairs:
+            if key in result:
+                raise ValueError("Duplicate JSON field")
+            result[key] = value
+        return result
+    def reject(value):
+        raise ValueError("Non-finite JSON number")
+    result = json.loads(raw.decode("utf-8"), object_pairs_hook=unique, parse_constant=reject)
+    if not isinstance(result, dict):
+        raise ValueError("Migration input must be an object")
+    return result
+
+
 def handler(port, token, db_path):
     host = f"127.0.0.1:{port}"
     origin = "http://" + host
@@ -380,8 +477,31 @@ def handler(port, token, db_path):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8766)
-    parser.add_argument("--backup", type=Path, help="Create a checked, new local SQLite snapshot and exit")
+    maintenance = parser.add_mutually_exclusive_group()
+    maintenance.add_argument("--backup", type=Path, help="Create a checked, new local SQLite snapshot and exit")
+    maintenance.add_argument("--migrate-to", type=Path, help="Migrate into a separate new exported workspace folder")
+    parser.add_argument("--defaults", type=Path, help="JSON object of explicit defaults for added fields")
     args = parser.parse_args()
+    if (args.migrate_to is None) != (args.defaults is None):
+        parser.error("--migrate-to and --defaults must be used together")
+    if args.migrate_to is not None:
+        try:
+            destination = args.migrate_to.resolve()
+            if destination == ROOT.resolve() or not destination.is_dir():
+                raise ValueError("Choose a separate extracted workspace folder")
+            for name in ("server.py", "index.html", "style.css", "app.js", "config.json"):
+                if not (destination / name).is_file():
+                    raise ValueError("Destination is not an extracted workspace")
+            old_config = read_migration_json(ROOT / "config.json")
+            new_config = read_migration_json(destination / "config.json")
+            report = migrate_database(ROOT / "workspace.sqlite3", destination / "workspace.sqlite3",
+                                      old_config.get("fields", []), new_config.get("fields", []),
+                                      read_migration_json(args.defaults))
+            print(json.dumps(report, indent=2))
+            print("Migration complete. Inspect the new workspace before using it; the source was not modified.")
+        except (ValueError, OSError, sqlite3.Error) as exc:
+            parser.error(str(exc))
+        return
     if args.backup is not None:
         try:
             config = json.loads((ROOT / "config.json").read_text(encoding="utf-8"))
