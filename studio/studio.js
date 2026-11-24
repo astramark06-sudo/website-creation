@@ -188,7 +188,7 @@ async function start(){
         }else status('Visual report created. Existing draft unchanged.');
       }finally{$('visual-file').value='';$('visual-authorized').checked=false;}
     }));
-    $('save').addEventListener('click',()=>{project.review=approvals();download(new Blob([JSON.stringify(project,null,2)],{type:'application/json'}),'project.json');status('Draft JSON saved.');});
+    $('save').addEventListener('click',()=>{project.review=approvals();download(new Blob([JSON.stringify(project)],{type:'application/json'}),'project.json');status('Draft JSON saved.');});
     $('viewport').addEventListener('change',()=>$('frame').style.width=$('viewport').value);
     $('preview').addEventListener('click',()=>run(async()=>{status('Generating preview…');const r=await request('/api/preview',{spec:project,slug:$('preview-page').value});$('frame').srcdoc=(await r.json()).html;status('Preview generated. Test interactions after export.');}));
     $('export').addEventListener('click',()=>run(async()=>{status('Building draft…');const r=await request('/api/export',{spec:project});download(await r.blob(),'creator-project.zip');status('Verified draft exported. Nothing published.');}));
@@ -227,12 +227,12 @@ async function start(){
       if(!lines.length||lines.length>8)throw new Error('Custom models require 1 to 8 field lines.');
       return lines.map((line,index)=>{
         const parts=line.split('|').map(v=>v.trim()),type=(parts[1]||'').toLowerCase();
-        if(!parts[0]||parts[0].length>80||!['text','integer','choice','link'].includes(type))throw new Error('Use: Label | text, integer, link, or choice.');
+        if(!parts[0]||parts[0].length>80||!['text','integer','choice','link','stage'].includes(type))throw new Error('Use: Label | text, integer, link, choice or stage.');
         const field={id:'field'+(index+1),label:parts[0],type};
-        if(type==='choice'){
+        if(type==='choice'||type==='stage'){
           if(parts.length!==3)throw new Error('Choice fields need a third part with comma-separated options.');
           const choices=parts[2].split(',').map(v=>v.trim()).filter(Boolean);
-          if(!choices.length||choices.length>12||new Set(choices).size!==choices.length||choices.some(v=>v.length>80))throw new Error('Choice fields need 1 to 12 unique options.');
+          if(choices.length<(type==='stage'?2:1)||choices.length>12||new Set(choices).size!==choices.length||choices.some(v=>v.length>80))throw new Error('Choice fields need 1 to 12 unique options.');
           field.choices=choices;
         }else if(parts.length!==2)throw new Error('Non-choice fields use exactly: Label | type.');
         return field;

@@ -14,6 +14,12 @@ except ImportError:
 PLACEHOLDERS = {
     "my website", "describe your website.", "write an original introduction.",
     "add original content.", "new section", "new page",
+    "explain the purpose of your own website in original language.",
+    "describe your own offerings or examples using original material.",
+    "describe the legitimate action visitors should take.",
+    "describe your own purpose and audience in original language.",
+    "introduce your own offerings, ideas or examples.",
+    "explain the legitimate next step for your visitors.",
 }
 
 

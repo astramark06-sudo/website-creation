@@ -57,9 +57,9 @@ def installed_model(model, transport=local_request):
     if not valid_model(model):
         raise ValueError("Use a configured local model name, not a cloud model")
     result = transport("/api/tags")
-    if not isinstance(result, dict):
+    if not isinstance(result, dict) or not isinstance(result.get("models"), list):
         raise ValueError("Invalid local model inventory")
-    for item in result.get("models", []):
+    for item in result["models"]:
         if (isinstance(item, dict) and item.get("name") == model and
                 isinstance(item.get("size"), int) and item["size"] > 0 and
                 item.get("digest") and not item.get("remote_host") and

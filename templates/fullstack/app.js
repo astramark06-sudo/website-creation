@@ -27,9 +27,10 @@ function clear(){editId=null;$('editor').reset();populateLinks();$('submit').tex
 function setupFields(){
   for(const field of fields){
     const label=document.createElement('label');label.textContent=field.label;
-    const input=document.createElement(field.type==='choice'||field.type==='link'?'select':'input');
-    input.id='model-'+field.id;
-    if(field.type==='choice')for(const choice of field.choices){const option=document.createElement('option');option.value=choice;option.textContent=choice;input.append(option);}
+    const input=document.createElement(['choice','link','stage'].includes(field.type)?'select':'input');
+    input.id='model-'+field.id;label.htmlFor=input.id;input.setAttribute('aria-label',field.label);
+    if(field.type==='choice'||field.type==='stage')for(const choice of field.choices){const option=document.createElement('option');option.value=choice;option.textContent=choice;input.append(option);}
+    if(field.type==='stage'){input.disabled=true;const stageFilter=$('stage-filter');for(const choice of field.choices){const option=document.createElement('option');option.value=choice;option.textContent=choice;stageFilter.append(option);}$('stage-filter-label').hidden=false;}
     if(field.type==='integer'){input.type='number';input.min='0';input.max='1000000';input.step='1';input.required=true;input.defaultValue='0';}
     if(field.type==='text'){input.type='text';input.maxLength=160;}
     controls.set(field.id,input);label.append(input);$('model-fields').append(label);
@@ -62,7 +63,7 @@ function renderAnalytics(summary){
     group.className='analytics-field';heading.textContent=field.label;dl.className='analytics-grid';
     if(field.type==='integer'){
       metricPair(dl,'Total',field.total);metricPair(dl,'Average',field.average===null?'Not applicable':field.average);
-    }else if(field.type==='choice'){
+    }else if(field.type==='choice'||field.type==='stage'){
       for(const choice of field.choices)metricPair(dl,choice.label,choice.count);
     }else if(field.type==='link'){
       metricPair(dl,'Linked records',field.linked);metricPair(dl,'Without link',summary.total-field.linked);
@@ -73,6 +74,7 @@ function renderAnalytics(summary){
 }
 async function refresh(){
   const q=new URLSearchParams({q:$('search').value,state:$('filter').value});
+  if($('stage-filter').value)q.set('stage',$('stage-filter').value);
   const data=await api('/api/items?'+q);renderAnalytics(data.summary);$('items').replaceChildren();linkOptions=data.link_options||[];populateLinks(editId);
   for(const item of data.items){
     const li=document.createElement('li'),h=document.createElement('h3'),p=document.createElement('p');
@@ -91,13 +93,26 @@ async function refresh(){
       for(const f of fields)controls.get(f.id).value=f.type==='link'?(item.details[f.id]===null?'':String(item.details[f.id])):String(item.details[f.id]);
       $('submit').textContent='Save record';$('name').focus();
     });
+    const workflow=fields.find(f=>f.type==='stage');
+    if(workflow){
+      const current=item.details[workflow.id],index=workflow.choices.indexOf(current);
+      for(const [label,offset] of [['Previous stage',-1],['Next stage',1]]){
+        const target=workflow.choices[index+offset];
+        if(target===undefined)continue;
+        button(li,label+': '+target,()=>run(async()=>{
+          await api('/api/items',{action:'move_stage',id:item.id,expected:current,target});
+          if(editId===item.id)clear();
+          await refresh();
+        }));
+      }
+    }
     button(li,item.done?'Reopen':'Complete',()=>run(async()=>{await api('/api/items',{action:'toggle',id:item.id});await refresh();}));
     button(li,'Delete',()=>{if(confirm('Delete this record?'))run(async()=>{await api('/api/items',{action:'delete',id:item.id});if(editId===item.id)clear();await refresh();});});
     $('items').append(li);
   }
   status(data.items.length+' matching records.');
 }
-async function run(fn){if(busy)return;busy=true;try{await fn();}catch(e){status(e.message||'Request failed');}finally{busy=false;}}
+async function run(fn){if(busy)return;busy=true;const enabled=[...document.querySelectorAll('button:not(:disabled)')];enabled.forEach(b=>b.disabled=true);try{await fn();}catch(e){status(e.message||'Request failed');}finally{enabled.forEach(b=>b.disabled=false);busy=false;}}
 async function start(){try{
   const session=await api('/api/session');token=session.token;$('title').textContent=session.config.title;$('description').textContent=session.config.description;fields=session.config.fields||[];setupFields();
   $('editor').addEventListener('submit',e=>{e.preventDefault();run(async()=>{const data={action:editId===null?'add':'edit',title:$('name').value,notes:$('notes').value};if(editId!==null)data.id=editId;if(fields.length)data.details=detailsForSave();await api('/api/items',data);clear();await refresh();});});

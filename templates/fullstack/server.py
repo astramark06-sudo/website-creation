@@ -18,21 +18,26 @@ def validate_fields(fields):
     if not isinstance(fields, list) or len(fields) > 8:
         raise ValueError("Invalid field definitions")
     seen = set()
+    workflow_count = 0
     for field in fields:
         if not isinstance(field, dict):
             raise ValueError("Invalid field")
         kind = field.get("type")
-        keys = {"id", "label", "type"} | ({"choices"} if kind == "choice" else set())
-        if set(field) != keys or kind not in ("integer", "text", "choice", "link"):
+        keys = {"id", "label", "type"} | ({"choices"} if kind in ("choice", "stage") else set())
+        if set(field) != keys or kind not in ("integer", "text", "choice", "link", "stage"):
             raise ValueError("Invalid field type")
         name, label = field["id"], field["label"]
         if (not isinstance(name, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,31}", name)
                 or name in seen or not isinstance(label, str) or not label.strip() or len(label) > 80):
             raise ValueError("Invalid or duplicate field")
         seen.add(name)
-        if kind == "choice":
+        if kind == "stage":
+            workflow_count += 1
+            if workflow_count > 1:
+                raise ValueError("Only one workflow stage field is supported")
+        if kind in ("choice", "stage"):
             options = field["choices"]
-            if (not isinstance(options, list) or not 1 <= len(options) <= 12
+            if (not isinstance(options, list) or not (2 if kind == "stage" else 1) <= len(options) <= 12
                     or any(not isinstance(v, str) or not v.strip() or len(v) > 80 for v in options)
                     or len(set(options)) != len(options)):
                 raise ValueError("Invalid choices")
@@ -53,8 +58,8 @@ def split_details(fields, details, db=None, item_id=None):
             if not isinstance(value, str) or len(value) > 160:
                 raise ValueError("Text field exceeds limit")
             scalar[name] = value
-        elif kind == "choice":
-            if value not in field["choices"]:
+        elif kind in ("choice", "stage"):
+            if not isinstance(value, str) or value not in field["choices"]:
                 raise ValueError("Unknown choice")
             scalar[name] = value
         else:
@@ -100,13 +105,18 @@ def link_options(path, fields=None):
         return [dict(row) for row in db.execute("SELECT id,title FROM items ORDER BY title COLLATE NOCASE,id LIMIT ?", (LIMIT,))]
 
 
-def list_items(path, query="", state="all", fields=None):
+def list_items(path, query="", state="all", fields=None, stage=None):
     fields = validate_fields([] if fields is None else fields)
     if not isinstance(query, str) or state not in ("all", "open", "done") or len(query) > 200:
         raise ValueError("Invalid filter")
+    workflow = next((f for f in fields if f["type"] == "stage"), None)
+    if stage is not None and (not workflow or stage not in workflow["choices"]):
+        raise ValueError("Invalid workflow stage filter")
     scalar_ids = {f["id"] for f in fields if f["type"] != "link"}
     link_ids = {f["id"] for f in fields if f["type"] == "link"}
     with closing(database(path, fields)) as db:
+        # Read records and relationships from one consistent snapshot.
+        db.execute("BEGIN")
         rows = db.execute(
             "SELECT items.id,title,notes,done,item_details.data FROM items "
             "LEFT JOIN item_details ON item_details.item_id=items.id "
@@ -145,6 +155,8 @@ def list_items(path, query="", state="all", fields=None):
                         item["details"][name] = scalar[name]
                         values.append(str(scalar[name]))
                 split_details(fields, item["details"], db, item["id"])
+            if stage is not None and item["details"][workflow["id"]] != stage:
+                continue
             if not query or any(query.casefold() in value.casefold()
                                 for value in [item["title"], item["notes"], *values]):
                 result.append(item)
@@ -163,7 +175,7 @@ def summarize_items(items, fields=None):
         metric = {"id": name, "label": field["label"], "type": kind}
         if kind == "integer":
             metric.update(total=sum(values), average=round(sum(values) / total, 2) if total else None)
-        elif kind == "choice":
+        elif kind in ("choice", "stage"):
             metric["choices"] = [{"label": choice, "count": values.count(choice)}
                                  for choice in field["choices"]]
         elif kind == "link":
@@ -183,6 +195,9 @@ def change_item(path, payload, fields=None):
     action = payload.get("action")
     keys = {"add": {"action", "title", "notes"}, "edit": {"action", "id", "title", "notes"},
             "toggle": {"action", "id"}, "delete": {"action", "id"}}
+    workflow = next((f for f in fields if f["type"] == "stage"), None)
+    if workflow:
+        keys["move_stage"] = {"action", "id", "expected", "target"}
     if fields:
         keys["add"].add("details")
         keys["edit"].add("details")
@@ -198,6 +213,31 @@ def change_item(path, payload, fields=None):
         db.execute("BEGIN IMMEDIATE")
         item_id = payload.get("id")
         scalar, links = split_details(fields, payload.get("details", {}), db, item_id) if action in ("add", "edit") else ({}, {})
+        if workflow and action in ("add", "edit", "move_stage"):
+            name, stages = workflow["id"], workflow["choices"]
+            if action == "add":
+                if scalar[name] != stages[0]:
+                    raise ValueError("New records must start at the first stage")
+            else:
+                row = db.execute("SELECT data FROM item_details WHERE item_id=?", (item_id,)).fetchone()
+                if row is None:
+                    raise ValueError("Item not found")
+                previous = json.loads(row[0])
+                if not isinstance(previous, dict):
+                    raise ValueError("Invalid stored workflow data")
+                current = previous.get(name)
+                if current not in stages:
+                    raise ValueError("Invalid stored workflow stage")
+                if action == "edit" and scalar[name] != current:
+                    raise ValueError("Use the workflow controls to change stages")
+                if action == "move_stage":
+                    target = payload["target"]
+                    if not isinstance(target, str) or not isinstance(payload["expected"], str) or payload["expected"] != current or target not in stages or abs(stages.index(target) - stages.index(current)) != 1:
+                        raise ValueError("Invalid or stale workflow transition")
+                    previous[name] = target
+                    db.execute("UPDATE item_details SET data=? WHERE item_id=?",
+                               (json.dumps(previous, ensure_ascii=False, sort_keys=True), item_id))
+                    return
         if action == "add":
             if db.execute("SELECT count(*) FROM items").fetchone()[0] >= LIMIT:
                 raise ValueError("Item limit reached")
@@ -231,7 +271,7 @@ def backup_database(source, destination, fields=None):
     # SQLite's backup API copies a consistent snapshot, including committed
     # transactions in the journal. Validate the model before creating output.
     with closing(database(source, fields)) as original:
-        if original.execute("PRAGMA quick_check").fetchall()[0][0] != "ok":
+        if [row[0] for row in original.execute("PRAGMA quick_check")] != ["ok"]:
             raise ValueError("Source database failed integrity check")
         if original.execute("PRAGMA foreign_key_check").fetchone() is not None:
             raise ValueError("Source database has invalid relationships")
@@ -305,8 +345,10 @@ def handler(port, token, db_path):
                     if not secrets.compare_digest(self.headers.get("X-Workspace-Token", ""), token):
                         self.reply(403, {"error": "Invalid session"})
                         return
-                    params = parse_qs(parsed.query, max_num_fields=4)
-                    items = list_items(db_path, params.get("q", [""])[0], params.get("state", ["all"])[0], fields)
+                    params = parse_qs(parsed.query, keep_blank_values=True, max_num_fields=3)
+                    if set(params) - {"q", "state", "stage"} or any(len(v) != 1 for v in params.values()):
+                        raise ValueError("Invalid filters")
+                    items = list_items(db_path, params.get("q", [""])[0], params.get("state", ["all"])[0], fields, params.get("stage", [None])[0])
                     self.reply(200, {
                         "items": items,
                         "summary": summarize_items(items, fields),

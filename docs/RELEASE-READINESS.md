@@ -23,3 +23,9 @@ These checks are not a comprehensive accessibility, security, performance, cross
 ## Basic accessibility and diagnostic checks
 
 The generated site includes an original local favicon and an explicitly focusable skip-link destination. Browser reports record bounded console and operation diagnostics instead of only reporting that an error occurred. The project-specific check verifies keyboard activation of the skip link, unique IDs, labeled native form controls, nonempty document metadata, and basic names on links and buttons. These are targeted checks for the generator's known components, not an accessible-name implementation, screen-reader review or WCAG conformance audit. The favicon is included in the verified output and permitted only from the synthetic local origin during browser tests. Older exported websites should be rebuilt to use the new output format.
+
+## Reliability boundaries
+
+Project validation enforces a canonical UTF-8 size limit in addition to input file limits. Generated filenames reject reserved Windows device names. Exported draft JSON uses compact UTF-8 to preserve the project size bound. Integrity verification compares the complete manifest against the expected manifest, not only generated file hashes. The starter-content report includes the exact HTML-reference and screenshot-reference template wording. Search smoke tests now include a positive heading match as well as empty results and clearing. These checks do not independently certify content rights or completeness.
+
+JSON input rejects duplicate object keys and non-finite numbers. Generated file comparison reads at most the expected file length plus one byte. Studio requests allow a small envelope around the separately validated project size limit. Browser regression coverage includes matching across neighboring metric label/value elements and Unicode canonical equivalence.

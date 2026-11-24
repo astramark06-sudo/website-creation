@@ -175,6 +175,46 @@ class FullstackTests(unittest.TestCase):
         self.assertEqual(app["summarize_items"]([]), {"total": 0, "completed": 0, "open": 0,
                                                     "completion_percent": None, "fields": []})
 
+    def test_ordered_workflow_transition_and_filter(self):
+        app = runpy.run_path(str(TEMPLATE / "server.py"))
+        fields = [{"id": "stage", "label": "Workflow", "type": "stage",
+                   "choices": ["Draft", "Review", "Approved"]}]
+        with zipfile.ZipFile(io.BytesIO(export_fullstack("Original", "Workflow", "custom", fields))) as archive:
+            self.assertEqual(json.loads(archive.read("config.json"))["fields"], fields)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "workflow.sqlite3"
+            change, listing = app["change_item"], app["list_items"]
+            add = {"action": "add", "title": "Document", "notes": "", "details": {"stage": "Draft"}}
+            with self.assertRaises(ValueError):
+                change(path, {**add, "details": {"stage": "Approved"}}, fields)
+            change(path, add, fields)
+            item = listing(path, fields=fields)[0]
+            move = {"action": "move_stage", "id": item["id"], "expected": "Draft", "target": "Review"}
+            with self.assertRaises(ValueError):
+                change(path, {**move, "target": "Approved"}, fields)
+            with self.assertRaises(ValueError):
+                change(path, {**add, "action": "edit", "id": item["id"], "details": {"stage": "Review"}}, fields)
+            change(path, move, fields)
+            with self.assertRaises(ValueError):
+                change(path, move, fields)
+            self.assertEqual(listing(path, fields=fields, stage="Draft"), [])
+            reviewed = listing(path, fields=fields, stage="Review")
+            self.assertEqual(len(reviewed), 1)
+            self.assertEqual(reviewed[0]["done"], 0)
+            summary = app["summarize_items"](reviewed, fields)
+            self.assertEqual([v["count"] for v in summary["fields"][0]["choices"]], [0, 1, 0])
+            change(path, {**move, "expected": "Review", "target": "Draft"}, fields)
+            self.assertEqual(listing(path, fields=fields)[0]["details"]["stage"], "Draft")
+
+    def test_workflow_schema_limits(self):
+        field = {"id": "stage", "label": "Stage", "type": "stage", "choices": ["One", "Two"]}
+        with self.assertRaises(ValueError):
+            validate_fields([{**field, "choices": ["One"]}], True)
+        with self.assertRaises(ValueError):
+            validate_fields([field, {**field, "id": "second"}], True)
+        with self.assertRaises(ValueError):
+            validate_fields([{**field, "choices": ["One", "One"]}], True)
+
 
 if __name__ == "__main__":
     unittest.main()
