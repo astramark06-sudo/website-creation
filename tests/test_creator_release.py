@@ -1,10 +1,14 @@
 """Release reports describe observed evidence and never approve publication."""
 from pathlib import Path
+import io
+import json
+import tempfile
 import unittest
+from contextlib import redirect_stdout, redirect_stderr
 from unittest.mock import patch
 
-from scripts.creator_project import read_spec, filename, verify
-from scripts.creator_release import release_report
+from scripts.creator_project import build, read_spec, filename, verify
+from scripts.creator_release import release_report, main
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -64,6 +68,47 @@ class ReleaseTests(unittest.TestCase):
             failed = release_report(self.spec, engines=["chromium"])
         self.assertIn("failed", [gate["status"] for gate in failed["gates"]])
         self.assertFalse(failed["publication_ready"])
+
+    def test_existing_output_matches_and_is_not_modified(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "site"
+            build(self.spec, output)
+            before = {p.name: p.read_bytes() for p in output.iterdir()}
+            self.assertEqual(release_report(self.spec, output=output), release_report(self.spec))
+            self.assertEqual({p.name: p.read_bytes() for p in output.iterdir()}, before)
+            (output / "index.html").write_text("changed", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                release_report(self.spec, output=output)
+            self.assertEqual((output / "index.html").read_text(), "changed")
+
+    def test_reviewed_gate_rejects_unapproved_input_and_missing_engines(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_file = Path(tmp) / "spec.json"
+            spec_file.write_text(json.dumps(self.spec), encoding="utf-8")
+            for approved in (False, True):
+                if approved:
+                    self.spec["review"] = {key: True for key in self.spec["review"]}
+                    spec_file.write_text(json.dumps(self.spec), encoding="utf-8")
+                with patch("sys.argv", ["release", "--spec", str(spec_file), "--require-reviewed"]), redirect_stderr(io.StringIO()):
+                    with self.assertRaises(SystemExit) as exc:
+                        main()
+                    self.assertEqual(exc.exception.code, 2)
+
+    def test_reviewed_gate_records_warnings_and_exits_nonzero(self):
+        self.spec["review"] = {key: True for key in self.spec["review"]}
+        self.spec["title"] = "My website"
+        report = release_report(self.spec)
+        report["browser_reports"] = [{"status": "passed"}]
+        with tempfile.TemporaryDirectory() as tmp:
+            spec_file, evidence = Path(tmp) / "spec.json", Path(tmp) / "report.json"
+            spec_file.write_text(json.dumps(self.spec), encoding="utf-8")
+            args = ["release", "--spec", str(spec_file), "--require-reviewed", "--engine", "chromium", "--report", str(evidence)]
+            with patch("sys.argv", args), patch("scripts.creator_release.release_report", return_value=report), redirect_stdout(io.StringIO()):
+                with self.assertRaises(SystemExit) as exc:
+                    main()
+                self.assertEqual(exc.exception.code, 1)
+            self.assertEqual(json.loads(evidence.read_text()), report)
+            self.assertFalse(report["publication_ready"])
 
     def test_invalid_engines_rejected(self):
         for engines in (["unknown"], ["chromium", "chromium"], "chromium"):
