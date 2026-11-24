@@ -28,8 +28,10 @@ Coding agents must read [AGENTS.md](AGENTS.md) before making changes and read [.
 
 ## Project state
 
-The repository is still a tooling starter. No frontend framework, application scaffold, package manifest or website content has been selected. App-specific CI checks and deployment remain conditional until the corresponding source/configuration exists.
+The repository contains the Master Creator toolkit and a local graphical studio. Individual website projects still require an approved purpose, content and release review.
 
 ## Master website creator
 
 Use the [offline creator planner and source catalogue](docs/MASTER-CREATOR.md) to select a zero-spend development profile and discover permitted public resources. The catalogue contains references, not copied third-party components, and the planner makes no network calls or installations.
+
+See the [local full-stack workspace starter](docs/FULLSTACK-STARTER.md) for SQLite-backed application export. It is local-only, not a public server deployment. See the [UTCP integration](docs/UTCP-INTEGRATION.md) for opt-in read-only tool discovery.
