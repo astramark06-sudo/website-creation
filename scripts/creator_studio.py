@@ -14,9 +14,11 @@ import zipfile
 try:
     from .creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec
     from .creator_reference import reference_plan
+    from .creator_ai import generate_draft, valid_model
 except ImportError:
     from creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec
     from creator_reference import reference_plan
+    from creator_ai import generate_draft, valid_model
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "studio"
@@ -53,7 +55,7 @@ def export_zip(spec):
         return result.getvalue()
 
 
-def make_handler(port, token):
+def make_handler(port, token, ai_model=None):
     host = f"127.0.0.1:{port}"
     origin = "http://" + host
 
@@ -83,6 +85,10 @@ def make_handler(port, token):
                 return False
             return True
 
+        def setup(self):
+            super().setup()
+            self.connection.settimeout(15)
+
         def do_GET(self):
             if not self.valid_host():
                 return
@@ -90,7 +96,7 @@ def make_handler(port, token):
                       "/studio.css": ("studio.css", "text/css; charset=utf-8"),
                       "/studio.js": ("studio.js", "text/javascript; charset=utf-8")}
             if self.path == "/api/session":
-                self.send_json(200, {"token": token, "project": read_spec(ROOT / "projects" / "example.json")})
+                self.send_json(200, {"token": token, "project": read_spec(ROOT / "projects" / "example.json"), "ai_enabled": ai_model is not None})
             elif self.path in routes:
                 name, mime = routes[self.path]
                 self.send_data(200, (UI / name).read_bytes(), mime)
@@ -103,7 +109,7 @@ def make_handler(port, token):
             if self.headers.get("Origin") != origin or not secrets.compare_digest(self.headers.get("X-Creator-Token", ""), token):
                 self.send_json(403, {"error": "Local session required"})
                 return
-            if self.path not in ("/api/preview", "/api/export", "/api/reference"):
+            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft"):
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
@@ -113,7 +119,14 @@ def make_handler(port, token):
                 if not 0 < length <= MAX_SPEC:
                     raise ValueError("Invalid request size")
                 payload = json.loads(self.rfile.read(length).decode("utf-8"))
-                if self.path == "/api/reference":
+                if self.path == "/api/ai-draft":
+                    if not ai_model:
+                        self.send_json(403, {"error": "Local AI is not enabled"})
+                        return
+                    if payload.get("confirmed") is not True:
+                        raise ValueError("Local AI consent required")
+                    self.send_json(200, {"project": generate_draft(payload["prompt"], ai_model)})
+                elif self.path == "/api/reference":
                     self.send_json(200, reference_plan(payload["source"], payload["title"], payload["objective"], payload["authorized"]))
                 elif self.path == "/api/preview":
                     self.send_json(200, {"html": preview_document(payload["spec"], payload["slug"])})
@@ -129,10 +142,13 @@ def make_handler(port, token):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
+    parser.add_argument("--local-model", help="Opt in to an already installed offline Ollama model")
     args = parser.parse_args()
+    if args.local_model and not valid_model(args.local_model):
+        parser.error("Use a local model name, not a cloud model")
     if not 1024 <= args.port <= 65535:
         parser.error("Choose a port from 1024 to 65535")
-    with ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(args.port, secrets.token_urlsafe(32))) as server:
+    with ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(args.port, secrets.token_urlsafe(32), args.local_model)) as server:
         print(f"Master Creator: http://127.0.0.1:{args.port} (local only)")
         try:
             server.serve_forever()
