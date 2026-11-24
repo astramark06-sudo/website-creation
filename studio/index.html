@@ -14,7 +14,12 @@
 <h2 id="project-heading">Project</h2>
 <label>Website name<input id="title" maxlength="120"></label>
 <label>Description<textarea id="description" rows="3" maxlength="1000"></textarea></label>
-<label>Color theme<select id="theme"><option value="teal">Teal</option><option value="blue">Blue</option><option value="plum">Plum</option></select></label>
+<label>Color theme<select id="theme"><option value="teal">Teal</option><option value="blue">Blue</option><option value="plum">Plum</option><option value="forest">Forest</option><option value="terracotta">Terracotta</option><option value="slate">Slate</option></select></label>
+<h2>Design system</h2>
+<label>Page layout<select id="layout"><option value="grid">Card grid</option><option value="editorial">Editorial</option><option value="showcase">Showcase</option><option value="compact">Compact</option></select></label>
+<label>Heading typeface<select id="typeface"><option value="system">System sans</option><option value="editorial">Editorial serif</option></select></label>
+<label>Spacing<select id="density"><option value="comfortable">Comfortable</option><option value="spacious">Spacious</option></select></label>
+<label>Card style<select id="surface"><option value="rounded">Rounded</option><option value="square">Square</option><option value="flat">Flat</option></select></label>
 <div class="actions"><button id="new">New project</button><label>Import JSON<input id="import" type="file" accept=".json,application/json"></label><button id="save">Save JSON</button></div>
 <section id="ai-panel" hidden aria-labelledby="ai-heading">
 <h2 id="ai-heading">Local AI draft</h2>
