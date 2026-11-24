@@ -108,6 +108,49 @@ class StudioBrowserTests(unittest.TestCase):
             finally:
                 browser.close()
 
+    def test_multipage_reference_requires_consent_and_preserves_originality(self):
+        with sync_playwright() as pw, serve(lambda port: make_handler(port, "reference-test")) as url:
+            browser = launch_browser(pw)
+            try:
+                page = browser.new_page(accept_downloads=True)
+                page.goto(url)
+                expect(page.locator("#status")).to_contain_text("Preview generated")
+                files = [{"name": "private-one.html", "mimeType": "text/html", "buffer": b"<nav>Private reference title</nav>"},
+                         {"name": "private-two.html", "mimeType": "text/html", "buffer": b"<article><img src='private.png'></article>"},
+                         {"name": "private-three.html", "mimeType": "text/html", "buffer": b"<table><tr><td>Private cell</td></tr></table>"}]
+                picker = page.locator("#reference")
+                button = page.get_by_role("button", name="Analyze reference and propose draft")
+                picker.set_input_files(files)
+                button.click()
+                expect(page.locator("#status")).to_contain_text("confirm permission")
+                page.locator("#reference-authorized").check()
+                page.once("dialog", lambda dialog: dialog.dismiss())
+                button.click()
+                expect(page.locator("#status")).to_contain_text("Existing draft unchanged")
+                expect(page.locator(".page-card")).to_have_count(2)
+                picker.set_input_files(files)
+                page.locator("#reference-authorized").check()
+                page.once("dialog", lambda dialog: dialog.accept())
+                button.click()
+                expect(page.locator(".page-card")).to_have_count(3)
+                expect(page.locator("#status")).to_contain_text("Original reference-informed draft created")
+                report = json.loads(page.locator("#reference-report").text_content())
+                self.assertEqual(report["observations"]["reference_count"], 3)
+                with page.expect_download() as download:
+                    page.get_by_role("button", name="Build and export ZIP").click()
+                with zipfile.ZipFile(download.value.path()) as archive:
+                    spec = json.loads(archive.read("project.json"))
+                    self.assertEqual([p["slug"] for p in spec["pages"]], ["home", "topic-2", "topic-3"])
+                    self.assertFalse(any(spec["review"].values()))
+                    for secret in ("private-one", "Private reference title", "private.png", "Private cell"):
+                        self.assertNotIn(secret, json.dumps(spec) + json.dumps(report))
+                headers = {"Origin": url, "X-Creator-Token": "reference-test"}
+                response = page.request.post(url + "/api/reference", headers=headers,
+                                             data={"sources": ["one", "two"], "title": "Name", "objective": "Goal", "authorized": False})
+                self.assertEqual(response.status, 400)
+            finally:
+                browser.close()
+
     def test_request_boundaries(self):
         with sync_playwright() as pw, serve(lambda port: make_handler(port, "test-token")) as url:
             request = pw.request.new_context()
