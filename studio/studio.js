@@ -32,7 +32,7 @@ function render(){
     field(card,'Page address',p.slug,v=>{p.slug=v;updatePages();},{disabled:i===0,max:48});
     field(card,'Page title',p.title,v=>{p.title=v;updatePages();},{max:120});
     field(card,'Introduction',p.intro,v=>p.intro=v,{multiline:true,max:1000});
-    field(card,'Interaction',p.interaction,v=>p.interaction=v,{choices:['none','tasks']});
+    field(card,'Interaction',p.interaction,v=>p.interaction=v,{choices:['none','tasks','search']});
     p.sections.forEach((s,j)=>{
       const block=document.createElement('div');block.className='section-card';
       field(block,'Component type',s.kind||'card',v=>{s.kind=v;render();},{choices:['card','article','callout','faq','list','steps']});

@@ -130,6 +130,26 @@ def check_browser(spec, output=None, engine="chromium", publish=False):
                                 checks["task_persistence"] = page.locator("#tasks .done").count() == 1
                                 page.get_by_role("button", name="Remove: Creator browser check", exact=True).click()
                                 checks["task_remove"] = page.locator("#tasks li").count() == 0
+                            if item["interaction"] == "search":
+                                query = page.locator("#section-query")
+                                total = len(item["sections"])
+                                checks["search_initial"] = page.locator("#page-sections > :not([hidden])").count() == total
+                                # A query longer than any generated heading is not assumed absent;
+                                # choose a deterministic token that is absent from actual DOM content.
+                                absent = "creator-check-no-match"
+                                text = page.locator("#page-sections").text_content().lower()
+                                while absent in text:
+                                    absent += "x"
+                                query.fill(absent)
+                                checks["search_empty_result"] = (
+                                    page.locator("#page-sections > :not([hidden])").count() == 0 and
+                                    page.locator("#section-search-status").text_content() == f"0 of {total} sections shown."
+                                )
+                                page.locator("#section-reset").click()
+                                checks["search_reset"] = (
+                                    page.locator("#page-sections > :not([hidden])").count() == total and
+                                    query.input_value() == ""
+                                )
                             # Follow one actual internal link (or the current page on a one-page site).
                             next_name = expected_pages[(expected_pages.index(name) + 1) % len(expected_pages)]
                             page.locator(f'nav a[href="{next_name}"]').click()

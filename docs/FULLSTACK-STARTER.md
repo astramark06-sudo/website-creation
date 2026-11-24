@@ -10,4 +10,4 @@ CLI usage:
 python scripts/creator_fullstack.py --title "My records" --description "Original workspace" --output workspace.zip
 ```
 
-The regression tests validate ZIP content and database operations. Browser and deployment verification are separate.
+The regression tests validate ZIP content and database operations. A dedicated Chromium integration test exports the actual app from the studio, exercises create/edit/complete/filter/search/delete, checks unauthenticated requests are rejected, and restarts the local server against the same database. Verify the current CI result before claiming the browser test passed. Public deployment remains separate and unsupported.

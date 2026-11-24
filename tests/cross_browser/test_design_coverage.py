@@ -17,6 +17,7 @@ class DesignCoverage(unittest.TestCase):
                 spec = read_spec(ROOT / "projects" / "example.json")
                 spec["design"] = {"layout": layout, "typeface": "system",
                                   "density": "comfortable", "surface": "rounded"}
+                spec["pages"][0]["interaction"] = "search"
                 spec["pages"][0]["sections"] = [
                     {"kind": kind, "heading": "Original " + kind,
                      "body": "First example\nSecond example"}

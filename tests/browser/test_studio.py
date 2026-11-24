@@ -65,7 +65,7 @@ class StudioBrowserTests(unittest.TestCase):
                         self.assertEqual(spec["title"], "Original browser test")
                         self.assertEqual(len(spec["pages"]), 3)
                         self.assertFalse(any(spec["review"].values()))
-                        for name in ("index.html", "workspace.html", "page-2.html", "style.css", "app.js"):
+                        for name in ("index.html", "workspace.html", "page-2.html", "style.css", "app.js", "favicon.svg"):
                             target = Path(tmp) / "site" / name
                             target.parent.mkdir(exist_ok=True)
                             target.write_bytes(archive.read("site/" + name))
