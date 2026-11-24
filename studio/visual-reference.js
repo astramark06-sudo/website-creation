@@ -62,5 +62,28 @@
       return classify(ctx.getImageData(0,0,SAMPLE,SAMPLE).data,size.w,size.h);
     }finally{bitmap.close();}
   }
+  async function prepareVision(file){
+    if(!file||file.size<=0||file.size>MAX_FILE)throw new Error('Choose a PNG or JPEG up to 8 MiB.');
+    const buffer=await file.arrayBuffer(), size=dimensions(buffer);
+    if(!size.w||!size.h||size.w>8192||size.h>8192||size.w*size.h>MAX_PIXELS)
+      throw new Error('Screenshot exceeds image dimension limit.');
+    for(const axis of [768,512,384,256]){
+      const scale=Math.min(1,axis/Math.max(size.w,size.h));
+      const w=Math.max(1,Math.round(size.w*scale)),h=Math.max(1,Math.round(size.h*scale));
+      const bitmap=await createImageBitmap(new Blob([buffer],{type:size.type}),{resizeWidth:w,resizeHeight:h,resizeQuality:'low'});
+      try{
+        const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+        const ctx=canvas.getContext('2d');if(!ctx)throw new Error('Image preparation unavailable.');
+        ctx.fillStyle='white';ctx.fillRect(0,0,w,h);ctx.drawImage(bitmap,0,0,w,h);
+        const url=canvas.toDataURL('image/jpeg',.68);
+        if(url.startsWith('data:image/jpeg;base64,')){
+          const encoded=url.slice('data:image/jpeg;base64,'.length);
+          if(encoded.length<=4*Math.ceil(65536/3)&&atob(encoded).length<=65536)return encoded;
+        }
+      }finally{bitmap.close();}
+    }
+    throw new Error('Unable to reduce screenshot to 64 KiB.');
+  }
+  window.prepareVisionReference=prepareVision;
   window.analyzeVisualReference=analyze;
 })();

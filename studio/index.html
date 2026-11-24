@@ -53,6 +53,12 @@
 <label>Local screenshot<input id="visual-file" type="file" accept="image/png,image/jpeg"></label>
 <label><span><input id="visual-authorized" type="checkbox"> I have permission to analyze this screenshot.</span></label>
 <button id="visual-analyze" type="button">Propose screenshot-informed draft</button>
+<div id="vision-panel" hidden>
+<h3>Optional local model interpretation</h3>
+<p>Unlike the category-only mode, this sends a reduced JPEG to your configured local Ollama service via Studio. Use only authorized screenshots without private information. No model is downloaded automatically.</p>
+<label><span><input id="vision-consent" type="checkbox"> I agree to send the reduced screenshot to the configured local model.</span></label>
+<button id="vision-analyze" type="button">Propose local vision draft</button>
+</div>
 <pre id="visual-report" aria-live="polite"></pre>
 </details>
 <h2>Pages</h2><div id="pages"></div><button id="add-page">Add page</button>
