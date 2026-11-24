@@ -153,7 +153,7 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
                 elif self.path == "/api/tool-plan":
                     self.send_json(200, propose_plan(payload))
                 elif self.path == "/api/fullstack-export":
-                    data = export_fullstack(payload["title"], payload["description"], payload.get("model", "records"))
+                    data = export_fullstack(payload["title"], payload["description"], payload.get("model", "records"), payload.get("fields"))
                     self.send_data(200, data, "application/zip", {"Content-Disposition": 'attachment; filename="local-data-workspace.zip"'})
                 elif self.path == "/api/visual-reference":
                     self.send_json(200, visual_plan(payload["observations"], payload["title"], payload["objective"], payload["authorized"]))

@@ -217,7 +217,31 @@ async function start(){
     $('release-save').addEventListener('click',()=>{
       if(latestRelease)download(new Blob([JSON.stringify(latestRelease,null,2)],{type:'application/json'}),'creator-release-report.json');
     });
-    $('fullstack-export').addEventListener('click',()=>run(async()=>{status('Building local database app…');const r=await request('/api/fullstack-export',{title:project.title,description:project.description,model:$('fullstack-model').value});download(await r.blob(),'local-data-workspace.zip');status('Local database app exported. Run server.py in the extracted folder.');}));
+    const syncFullstackModel=()=>{$('custom-model-fields').hidden=$('fullstack-model').value!=='custom';};
+    const customFields=()=>{
+      const lines=$('custom-fields').value.split(/\r?\n/).map(v=>v.trim()).filter(Boolean);
+      if(!lines.length||lines.length>8)throw new Error('Custom models require 1 to 8 field lines.');
+      return lines.map((line,index)=>{
+        const parts=line.split('|').map(v=>v.trim()),type=(parts[1]||'').toLowerCase();
+        if(!parts[0]||parts[0].length>80||!['text','integer','choice','link'].includes(type))throw new Error('Use: Label | text, integer, link, or choice.');
+        const field={id:'field'+(index+1),label:parts[0],type};
+        if(type==='choice'){
+          if(parts.length!==3)throw new Error('Choice fields need a third part with comma-separated options.');
+          const choices=parts[2].split(',').map(v=>v.trim()).filter(Boolean);
+          if(!choices.length||choices.length>12||new Set(choices).size!==choices.length||choices.some(v=>v.length>80))throw new Error('Choice fields need 1 to 12 unique options.');
+          field.choices=choices;
+        }else if(parts.length!==2)throw new Error('Non-choice fields use exactly: Label | type.');
+        return field;
+      });
+    };
+    $('fullstack-model').addEventListener('change',syncFullstackModel);syncFullstackModel();
+    $('fullstack-export').addEventListener('click',()=>run(async()=>{
+      status('Building local database app…');
+      const model=$('fullstack-model').value,payload={title:project.title,description:project.description,model};
+      if(model==='custom')payload.fields=customFields();
+      const r=await request('/api/fullstack-export',payload);download(await r.blob(),'local-data-workspace.zip');
+      status('Local database app exported. Run server.py in the extracted folder.');
+    }));
     status('Ready.');$('preview').click();
   }catch(e){status('Unable to load studio: '+e.message);}
 }
