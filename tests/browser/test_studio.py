@@ -12,7 +12,7 @@ import zipfile
 
 from playwright.sync_api import expect, sync_playwright
 from scripts.creator_project import read_spec
-from scripts.creator_studio import make_handler
+from scripts.creator_studio import make_handler, export_zip
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -152,6 +152,132 @@ class StudioBrowserTests(unittest.TestCase):
                 response = page.request.post(url + "/api/reference", headers=headers,
                                              data={"sources": ["one", "two"], "title": "Name", "objective": "Goal", "authorized": False})
                 self.assertEqual(response.status, 400)
+            finally:
+                browser.close()
+
+    def test_json_import_validates_raw_source_and_clears_approvals(self):
+        with sync_playwright() as pw, serve(lambda port: make_handler(port, "import-test")) as url:
+            browser = launch_browser(pw)
+            try:
+                page = browser.new_page()
+                page.goto(url)
+                expect(page.locator("#status")).to_contain_text("Preview generated")
+                title = page.get_by_label("Website name")
+                title.fill("Current project")
+                spec = read_spec(ROOT / "projects" / "example.json")
+                spec["title"] = "Imported project"
+                spec["review"] = {key: True for key in spec["review"]}
+                valid = json.dumps(spec).encode()
+                duplicate = valid.replace(b'"version": 1', b'"version": 1, "version": 1', 1)
+                picker = page.locator("#import")
+                picker.set_input_files({"name": "duplicate.json", "mimeType": "application/json", "buffer": duplicate})
+                expect(page.locator("#status")).to_contain_text("Invalid project JSON")
+                expect(title).to_have_value("Current project")
+                page.once("dialog", lambda dialog: dialog.dismiss())
+                picker.set_input_files({"name": "valid.json", "mimeType": "application/json", "buffer": valid})
+                expect(page.locator("#status")).to_contain_text("Import cancelled")
+                expect(title).to_have_value("Current project")
+                page.once("dialog", lambda dialog: dialog.accept())
+                picker.set_input_files({"name": "valid.json", "mimeType": "application/json", "buffer": valid})
+                expect(page.locator("#status")).to_contain_text("Imported as an unapproved draft")
+                expect(title).to_have_value("Imported project")
+                headers = {"Origin": url, "X-Creator-Token": "import-test", "Content-Type": "application/json"}
+                response = page.request.post(url + "/api/import-project", headers=headers, data=valid)
+                self.assertEqual(response.status, 200)
+                self.assertFalse(any(response.json()["project"]["review"].values()))
+                self.assertEqual(page.request.post(url + "/api/import-project", headers=headers, data=duplicate).status, 400)
+                self.assertEqual(page.request.post(url + "/api/import-project", data=valid).status, 403)
+            finally:
+                browser.close()
+
+    def test_verified_zip_reopening_and_failed_verification(self):
+        with sync_playwright() as pw, serve(lambda port: make_handler(port, "zip-test")) as url:
+            browser = launch_browser(pw)
+            try:
+                page = browser.new_page(accept_downloads=True)
+                page.goto(url)
+                expect(page.locator("#status")).to_contain_text("Preview generated")
+                title = page.get_by_label("Website name")
+                title.fill("Current project")
+                spec = read_spec(ROOT / "projects" / "example.json")
+                spec["title"] = "Recovered project"
+                spec["review"] = {key: True for key in spec["review"]}
+                data = export_zip(spec)
+                page.locator("#bundle-panel summary").click()
+                picker = page.locator("#bundle-file")
+                button = page.get_by_role("button", name="Verify and reopen ZIP")
+                picker.set_input_files({"name": "invalid.zip", "mimeType": "application/zip", "buffer": b"not a ZIP"})
+                button.click()
+                expect(page.locator("#status")).to_contain_text("ZIP verification failed")
+                expect(title).to_have_value("Current project")
+                expect(page.locator("#bundle-save-report")).to_be_disabled()
+                picker.set_input_files({"name": "project.zip", "mimeType": "application/zip", "buffer": data})
+                page.once("dialog", lambda dialog: dialog.dismiss())
+                button.click()
+                expect(page.locator("#status")).to_contain_text("Existing draft unchanged")
+                expect(title).to_have_value("Current project")
+                expect(page.locator("#bundle-report")).to_contain_text("archive_sha256")
+                with page.expect_download() as download:
+                    page.get_by_role("button", name="Download ZIP verification report").click()
+                evidence = json.loads(Path(download.value.path()).read_text())
+                self.assertEqual(evidence["status"], "passed")
+                self.assertFalse(evidence["publication_ready"])
+                page.once("dialog", lambda dialog: dialog.accept())
+                button.click()
+                expect(page.locator("#status")).to_contain_text("Verified ZIP reopened")
+                expect(title).to_have_value("Recovered project")
+                headers = {"Origin": url, "X-Creator-Token": "zip-test", "Content-Type": "application/zip"}
+                response = page.request.post(url + "/api/import-bundle", headers=headers, data=data)
+                self.assertEqual(response.status, 200)
+                self.assertFalse(any(response.json()["project"]["review"].values()))
+                self.assertEqual(page.request.post(url + "/api/import-bundle", data=data).status, 403)
+                picker.set_input_files([])
+                expect(page.locator("#bundle-save-report")).to_be_disabled()
+            finally:
+                browser.close()
+
+    def test_delayed_imports_cannot_overwrite_newer_edits(self):
+        with sync_playwright() as pw, serve(lambda port: make_handler(port, "stale-import-test")) as url:
+            browser = launch_browser(pw)
+            try:
+                page = browser.new_page()
+                page.goto(url)
+                expect(page.locator("#status")).to_contain_text("Preview generated")
+                spec = read_spec(ROOT / "projects" / "example.json")
+                spec["title"] = "Old import response"
+                title = page.get_by_label("Website name")
+                page.evaluate("""() => {
+                    const realFetch = window.fetch.bind(window);
+                    window.fetch = async (...args) => {
+                        const response = await realFetch(...args);
+                        if (args[0] === '/api/import-project' || args[0] === '/api/import-bundle') {
+                            await new Promise(resolve => { window.releaseImportResponse = resolve; });
+                        }
+                        return response;
+                    };
+                }""")
+                page.locator("#import").set_input_files({
+                    "name": "draft.json", "mimeType": "application/json",
+                    "buffer": json.dumps(spec).encode(),
+                })
+                page.wait_for_function("typeof window.releaseImportResponse === 'function'")
+                title.fill("Newer JSON edit")
+                page.evaluate("() => { const release = window.releaseImportResponse; delete window.releaseImportResponse; release(); }")
+                expect(page.locator("#status")).to_contain_text("Import discarded")
+                expect(title).to_have_value("Newer JSON edit")
+
+                page.locator("#bundle-panel summary").click()
+                page.locator("#bundle-file").set_input_files({
+                    "name": "draft.zip", "mimeType": "application/zip",
+                    "buffer": export_zip(spec),
+                })
+                page.get_by_role("button", name="Verify and reopen ZIP").click()
+                page.wait_for_function("typeof window.releaseImportResponse === 'function'")
+                title.fill("Newer ZIP edit")
+                page.evaluate("() => { const release = window.releaseImportResponse; delete window.releaseImportResponse; release(); }")
+                expect(page.locator("#status")).to_contain_text("Reopening discarded")
+                expect(title).to_have_value("Newer ZIP edit")
+                expect(page.locator("#bundle-save-report")).to_be_disabled()
             finally:
                 browser.close()
 

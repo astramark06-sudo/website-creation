@@ -155,12 +155,48 @@ async function start(){
     for(const k of Object.keys(defaultDesign()))$(k).addEventListener('input',()=>{project.design={...(project.design||defaultDesign()),[k]:$(k).value};dirty();});
     $('new').addEventListener('click',()=>{if(confirm('Replace the current draft?')){project=fresh();dirty();render();$('frame').srcdoc='';}});
     $('add-page').addEventListener('click',()=>{if(project.pages.length>=20){status('Maximum 20 pages.');return;}let n=2;while(project.pages.some(p=>p.slug==='page-'+n))n++;project.pages.push(blank('page-'+n));dirty();render();});
-    $('import').addEventListener('change',async()=>{try{
-      const file=$('import').files[0];if(!file)return;if(file.size>131072)throw new Error('Project exceeds 128 KiB.');
-      const candidate=JSON.parse(await file.text());await request('/api/preview',{spec:candidate,slug:'home'});
-      if(!confirm('Replace the current draft with this imported project?'))return;
-      project=candidate;dirty();render();$('frame').srcdoc='';status('Imported as an unapproved draft.');
-    }catch(e){status(e.message);}finally{$('import').value='';}});
+    let importRevision=0;
+    $('import').addEventListener('change',async()=>{
+      const selection=++importRevision,revision=draftRevision,file=$('import').files[0];
+      const selected=()=>selection===importRevision&&$('import').files[0]===file;
+      const current=()=>selected()&&revision===draftRevision;
+      try{
+        if(!file)return;
+        if(!file.size||file.size>131072)throw new Error('Choose a nonempty project JSON up to 128 KiB.');
+        const response=await fetch('/api/import-project',{method:'POST',headers:{'Content-Type':'application/json','X-Creator-Token':token},body:file});
+        if(!current()){if(selected())status('Draft changed. Import discarded.');return;}
+        if(!response.ok)throw new Error('Invalid project JSON or unsupported project specification.');
+        const result=await response.json();
+        if(!current()){if(selected())status('Draft changed. Import discarded.');return;}
+        if(!confirm('Replace the current draft with this imported project?')){status('Import cancelled. Existing draft unchanged.');return;}
+        project=result.project;dirty();render();$('frame').srcdoc='';status('Imported as an unapproved draft.');
+      }catch(e){if(current())status(e.message||'Project import failed.');}
+      finally{if(selected())$('import').value='';}
+    });
+    let bundleSelection=0,bundleEvidence=null;
+    $('bundle-file').addEventListener('change',()=>{
+      bundleSelection++;bundleEvidence=null;$('bundle-save-report').disabled=true;$('bundle-report').textContent='';
+    });
+    $('bundle-save-report').addEventListener('click',()=>{
+      if(bundleEvidence)download(new Blob([JSON.stringify(bundleEvidence,null,2)],{type:'application/json'}),'bundle-evidence.json');
+    });
+    $('bundle-import').addEventListener('click',()=>run(async()=>{
+      const file=$('bundle-file').files[0],selection=bundleSelection,revision=draftRevision;
+      const current=()=>selection===bundleSelection&&$('bundle-file').files[0]===file&&revision===draftRevision;
+      bundleEvidence=null;$('bundle-save-report').disabled=true;$('bundle-report').textContent='';
+      if(!file||!file.size||file.size>4194304)throw new Error('Choose a nonempty static project ZIP up to 4 MiB.');
+      status('Verifying project ZIP locally…');
+      try{
+        const response=await fetch('/api/import-bundle',{method:'POST',headers:{'Content-Type':'application/zip','X-Creator-Token':token},body:file});
+        if(!current()){status('ZIP selection or draft changed. Reopening discarded.');return;}
+        if(!response.ok)throw new Error('ZIP verification failed. Use an unchanged static Studio export from the current generator.');
+        const result=await response.json();
+        if(!current()){status('ZIP selection or draft changed. Reopening discarded.');return;}
+        bundleEvidence=result.report;$('bundle-report').textContent=JSON.stringify(bundleEvidence,null,2);$('bundle-save-report').disabled=false;
+        if(!confirm('ZIP verified. Replace the current draft with its project specification?')){status('ZIP verified. Existing draft unchanged.');return;}
+        project=result.project;dirty();render();$('frame').srcdoc='';status('Verified ZIP reopened as an unapproved draft.');
+      }catch(e){if(current())throw e;}
+    }));
     let referenceRevision=0;
     $('reference').addEventListener('change',()=>{
       referenceRevision++;$('reference-authorized').checked=false;$('reference-report').textContent='';

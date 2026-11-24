@@ -23,6 +23,7 @@ try:
     from .creator_relational import validate_schema
     from .creator_relational_check import check_relational
     from .creator_tools import overview, query_tool, propose_plan
+    from .creator_bundle import MAX_ARCHIVE, read_verified_bundle
     from .creator_release import release_report
     from .creator_browser import check_browser
     from .creator_visual_reference import visual_plan
@@ -38,6 +39,7 @@ except ImportError:
     from creator_relational import validate_schema
     from creator_relational_check import check_relational
     from creator_tools import overview, query_tool, propose_plan
+    from creator_bundle import MAX_ARCHIVE, read_verified_bundle
     from creator_release import release_report
     from creator_browser import check_browser
     from creator_visual_reference import visual_plan
@@ -133,23 +135,42 @@ def make_handler(port, token, ai_model=None, browser_checks=False, vision_model=
             if self.headers.get("Origin") != origin or not secrets.compare_digest(self.headers.get("X-Creator-Token", ""), token):
                 self.send_json(403, {"error": "Local session required"})
                 return
-            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/relational-export", "/api/authenticated-export", "/api/relational-validate", "/api/relational-check", "/api/authenticated-check", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check", "/api/visual-reference", "/api/vision-reference"):
+            if self.path not in ("/api/import-project", "/api/import-bundle", "/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/relational-export", "/api/authenticated-export", "/api/relational-validate", "/api/relational-check", "/api/authenticated-check", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check", "/api/visual-reference", "/api/vision-reference"):
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
+                if self.path == "/api/import-bundle":
+                    if self.headers.get_content_type() != "application/zip":
+                        raise ValueError("Expected project ZIP")
+                    length = int(self.headers.get("Content-Length", "-1"))
+                    if not 0 < length <= MAX_ARCHIVE:
+                        raise ValueError("Invalid ZIP request size")
+                    data = self.rfile.read(length)
+                    if len(data) != length:
+                        raise ValueError("Incomplete ZIP request")
+                    project, report = read_verified_bundle(data)
+                    self.send_json(200, {"project": project, "report": report})
+                    return
                 if self.headers.get_content_type() != "application/json":
                     raise ValueError("Expected JSON")
                 length = int(self.headers.get("Content-Length", "-1"))
                 # Allow the bounded JSON envelope around a maximum-size project.
                 # JSON escaping can expand bounded local HTML by up to six times.
-                limit = 6 * REFERENCE_LIMIT + 16384 if self.path == "/api/reference" else MAX_SPEC + 4096
+                if self.path == "/api/reference":
+                    limit = 6 * REFERENCE_LIMIT + 16384
+                elif self.path == "/api/import-project":
+                    limit = MAX_SPEC
+                else:
+                    limit = MAX_SPEC + 4096
                 if not 0 < length <= limit:
                     raise ValueError("Invalid request size")
                 payload = json.loads(self.rfile.read(length).decode("utf-8"),
                                      object_pairs_hook=unique_object, parse_constant=reject_constant)
                 if not isinstance(payload, dict):
                     raise ValueError("Expected JSON object")
-                if self.path == "/api/ai-draft":
+                if self.path == "/api/import-project":
+                    self.send_json(200, {"project": draft_spec(payload)})
+                elif self.path == "/api/ai-draft":
                     if not ai_model:
                         self.send_json(403, {"error": "Local AI is not enabled"})
                         return
@@ -227,7 +248,7 @@ def make_handler(port, token, ai_model=None, browser_checks=False, vision_model=
                 else:
                     data = export_zip(payload["spec"])
                     self.send_data(200, data, "application/zip", {"Content-Disposition": 'attachment; filename="creator-project.zip"'})
-            except (ValueError, TypeError, KeyError, OSError, AttributeError):
+            except (ValueError, TypeError, KeyError, OSError, AttributeError, RecursionError):
                 self.send_json(400, {"error": "Invalid project. Check required fields, unique page addresses and size limits."})
 
     return Handler
