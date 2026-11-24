@@ -13,7 +13,7 @@ import zipfile
 
 try:
     from .creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec, spec_bytes, unique_object, reject_constant
-    from .creator_reference import reference_plan
+    from .creator_reference import reference_plan, reference_batch_plan, REFERENCE_LIMIT
     from .creator_ai import generate_draft, valid_model
     from .creator_vision import vision_plan
     from .creator_fullstack import export_fullstack
@@ -28,7 +28,7 @@ try:
     from .creator_visual_reference import visual_plan
 except ImportError:
     from creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec, spec_bytes, unique_object, reject_constant
-    from creator_reference import reference_plan
+    from creator_reference import reference_plan, reference_batch_plan, REFERENCE_LIMIT
     from creator_ai import generate_draft, valid_model
     from creator_vision import vision_plan
     from creator_fullstack import export_fullstack
@@ -141,7 +141,9 @@ def make_handler(port, token, ai_model=None, browser_checks=False, vision_model=
                     raise ValueError("Expected JSON")
                 length = int(self.headers.get("Content-Length", "-1"))
                 # Allow the bounded JSON envelope around a maximum-size project.
-                if not 0 < length <= MAX_SPEC + 4096:
+                # JSON escaping can expand bounded local HTML by up to six times.
+                limit = 6 * REFERENCE_LIMIT + 16384 if self.path == "/api/reference" else MAX_SPEC + 4096
+                if not 0 < length <= limit:
                     raise ValueError("Invalid request size")
                 payload = json.loads(self.rfile.read(length).decode("utf-8"),
                                      object_pairs_hook=unique_object, parse_constant=reject_constant)
@@ -206,7 +208,12 @@ def make_handler(port, token, ai_model=None, browser_checks=False, vision_model=
                 elif self.path == "/api/visual-reference":
                     self.send_json(200, visual_plan(payload["observations"], payload["title"], payload["objective"], payload["authorized"]))
                 elif self.path == "/api/reference":
-                    self.send_json(200, reference_plan(payload["source"], payload["title"], payload["objective"], payload["authorized"]))
+                    if set(payload) == {"source", "title", "objective", "authorized"}:
+                        self.send_json(200, reference_plan(payload["source"], payload["title"], payload["objective"], payload["authorized"]))
+                    elif set(payload) == {"sources", "title", "objective", "authorized"}:
+                        self.send_json(200, reference_batch_plan(payload["sources"], payload["title"], payload["objective"], payload["authorized"]))
+                    else:
+                        raise ValueError("Invalid reference request")
                 elif self.path == "/api/preview":
                     self.send_json(200, {"html": preview_document(payload["spec"], payload["slug"])})
                 else:
