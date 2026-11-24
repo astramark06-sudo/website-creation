@@ -80,3 +80,7 @@ GitHub Pages supports static files and browser-side interactions, not private se
 Run `python scripts/creator_studio.py` from the repository root, then open the printed loopback address in your browser. Edit project details, add or remove pages and sections, select a theme, import and save draft JSON, preview at three viewport widths, and export a verified ZIP. Preview is deliberately non-interactive; test the exported site locally. Imported and exported projects remain unapproved drafts; publishing uses the separate reviewed GitHub Pages workflow.
 
 The studio binds only to IPv4 loopback, checks Host and Origin headers and requires a per-run request token. Do not forward its port or expose it publicly. Save the JSON or export before closing; the server does not retain drafts. Browser end-to-end and accessibility verification remain separate checks. No additional dependencies or paid services are required.
+
+## Browser verification
+
+A dedicated Creator studio browser verification workflow runs Chromium against the local studio and its generated output. It tests editing, responsive preview, ZIP export, task persistence, and local request boundaries. Playwright is a test-only dependency; the studio and generated sites remain dependency-free. Browser smoke tests do not replace a complete accessibility or cross-browser review.
