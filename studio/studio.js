@@ -215,20 +215,33 @@ async function start(){
     $('viewport').addEventListener('change',()=>$('frame').style.width=$('viewport').value);
     $('preview').addEventListener('click',()=>run(async()=>{status('Generating preview…');const r=await request('/api/preview',{spec:project,slug:$('preview-page').value});$('frame').srcdoc=(await r.json()).html;status('Preview generated. Test interactions after export.');}));
     $('export').addEventListener('click',()=>run(async()=>{status('Building draft…');const r=await request('/api/export',{spec:project});download(await r.blob(),'creator-project.zip');status('Verified draft exported. Nothing published.');}));
-    $('release-check').addEventListener('click',()=>run(async()=>{
-      const revision=draftRevision;
+    let releaseUsesBrowser=false;
+    const runRelease=combined=>run(async()=>{
+      if(combined&&!session.browser_checks_enabled)return;
+      const engine=$('browser-check-engine').value;
+      if(combined&&!confirm('Run fresh build and browser smoke checks on this draft using the selected installed browser? Nothing will be published.'))return;
+      const revision=draftRevision, selectedRevision=browserRevision;
+      const current=()=>revision===draftRevision&&(!combined||selectedRevision===browserRevision);
+      releaseUsesBrowser=combined;
       $('release-save').disabled=true;latestRelease=null;$('release-results').replaceChildren();
-      $('release-status').textContent='Checking this draft…';
+      $('release-status').textContent=combined?'Checking build and '+engine+'…':'Checking this draft…';
       try{
-        const result=await(await request('/api/release-report',{spec:project})).json();
-        if(revision!==draftRevision)return;
+        const payload=combined?{spec:project,engines:[engine],confirmed:true}:{spec:project};
+        const result=await(await request('/api/release-report',payload)).json();
+        if(!current())return;
         latestRelease=result;renderRelease(result);$('release-save').disabled=false;
-        $('release-status').textContent='Report generated. Human and project-specific testing gates remain.';
-      }catch(e){if(revision===draftRevision)$('release-status').textContent='Release check failed: '+e.message;throw e;}
-    }));
+        $('release-status').textContent=combined?'Combined report generated. Review results; publication is not approved.':'Report generated. Human and project-specific testing gates remain.';
+      }catch(e){if(current())$('release-status').textContent='Release check failed: '+e.message;throw e;}
+    });
+    $('release-check').addEventListener('click',()=>runRelease(false));
+    $('combined-release-check').addEventListener('click',()=>runRelease(true));
     $('browser-check-engine').addEventListener('change',()=>{
       browserRevision++;latestBrowser=null;$('browser-save').disabled=true;$('browser-check-results').replaceChildren();
       $('browser-check-status').textContent='Browser changed. Run new browser checks.';
+      if(releaseUsesBrowser){
+        latestRelease=null;$('release-save').disabled=true;$('release-results').replaceChildren();
+        $('release-status').textContent='Browser changed. Run a new combined release check.';
+      }
     });
     $('browser-check').addEventListener('click',()=>run(async()=>{
       if(!session.browser_checks_enabled)return;
