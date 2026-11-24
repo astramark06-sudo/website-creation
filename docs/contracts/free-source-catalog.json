@@ -1,0 +1,255 @@
+{
+  "version": 1,
+  "review_date": "2026-11-24",
+  "policy": "Original source index only. No copied third-party source, previews, screenshots, prompts or assets. All item-level adoption requires a license and cost review.",
+  "sources": [
+    {
+      "id": "21st-marketplace",
+      "name": "21st.dev",
+      "url": "https://21st.dev/",
+      "upstream": "https://21st.dev/mcp",
+      "license_url": "https://21st.dev/terms",
+      "access": "metered-free",
+      "tags": [
+        "inspiration",
+        "components"
+      ],
+      "notes": "Official search is free; current free allowance is two code retrievals per day across clients. Check current terms and each item license. No mirroring.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "shadcn-directory",
+      "name": "shadcn registry directory",
+      "url": "https://ui.shadcn.com/docs/directory",
+      "upstream": "https://github.com/shadcn-ui/ui",
+      "license_url": "https://github.com/shadcn-ui/ui/blob/main/LICENSE.md",
+      "access": "mixed-directory",
+      "tags": [
+        "components",
+        "discovery"
+      ],
+      "notes": "Directory entries have separate licenses; verify selected upstream item.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "hyperui",
+      "name": "HyperUI",
+      "url": "https://www.hyperui.dev/",
+      "upstream": "https://github.com/markmead/hyperui",
+      "license_url": "https://github.com/markmead/hyperui/blob/main/LICENSE",
+      "access": "open-source",
+      "tags": [
+        "components",
+        "marketing",
+        "ecommerce"
+      ],
+      "notes": "MIT upstream; verify notices and revision before reuse.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "merakiui",
+      "name": "Meraki UI",
+      "url": "https://merakiui.com/",
+      "upstream": "https://github.com/merakiuilabs/merakiui",
+      "license_url": "https://github.com/merakiuilabs/merakiui/blob/main/LICENSE",
+      "access": "open-source",
+      "tags": [
+        "components",
+        "marketing"
+      ],
+      "notes": "MIT upstream; check dependencies and notices.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "ark-ui",
+      "name": "Ark UI",
+      "url": "https://ark-ui.com/",
+      "upstream": "https://github.com/chakra-ui/ark",
+      "license_url": "https://github.com/chakra-ui/ark/blob/main/LICENSE",
+      "access": "open-source",
+      "tags": [
+        "primitives",
+        "accessibility"
+      ],
+      "notes": "MIT upstream; alternative primitive layer, not a second default.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "heroicons",
+      "name": "Heroicons",
+      "url": "https://heroicons.com/",
+      "upstream": "https://github.com/tailwindlabs/heroicons",
+      "license_url": "https://github.com/tailwindlabs/heroicons/blob/master/LICENSE",
+      "access": "open-source",
+      "tags": [
+        "icons"
+      ],
+      "notes": "MIT upstream; use one coherent icon family.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "preline",
+      "name": "Preline UI",
+      "url": "https://preline.co/",
+      "upstream": "https://github.com/htmlstreamofficial/preline",
+      "license_url": "https://github.com/htmlstreamofficial/preline/blob/main/LICENSE",
+      "access": "mixed-directory",
+      "tags": [
+        "components",
+        "marketing"
+      ],
+      "notes": "Dual license and separate Pro offering; only reviewed free items, no bulk redistribution.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "magic-ui",
+      "name": "Magic UI",
+      "url": "https://magicui.design/",
+      "upstream": "https://github.com/magicuidesign/magicui",
+      "license_url": "https://github.com/magicuidesign/magicui/blob/main/LICENSE",
+      "access": "mixed-directory",
+      "tags": [
+        "components",
+        "motion"
+      ],
+      "notes": "Use verified free upstream items; paid templates excluded.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "react-bits",
+      "name": "React Bits",
+      "url": "https://reactbits.dev/",
+      "upstream": "https://github.com/DavidHDev/react-bits",
+      "license_url": "https://github.com/DavidHDev/react-bits/blob/main/LICENSE",
+      "access": "mixed-directory",
+      "tags": [
+        "components",
+        "motion"
+      ],
+      "notes": "Review upstream license and redistribution restrictions; no library mirror.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "motion-primitives",
+      "name": "Motion Primitives",
+      "url": "https://motion-primitives.com/",
+      "upstream": "https://github.com/ibelick/motion-primitives",
+      "license_url": "https://github.com/ibelick/motion-primitives",
+      "access": "open-source",
+      "tags": [
+        "components",
+        "motion"
+      ],
+      "notes": "Review selected revision and license before adoption.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "design-tokens",
+      "name": "Design Tokens Community Group",
+      "url": "https://www.designtokens.org/",
+      "upstream": "https://www.designtokens.org/TR/2025.10/format/",
+      "license_url": "https://www.designtokens.org/",
+      "access": "reference",
+      "tags": [
+        "tokens",
+        "design"
+      ],
+      "notes": "Use format as reference; write project-owned token values.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "style-dictionary",
+      "name": "Style Dictionary",
+      "url": "https://styledictionary.com/",
+      "upstream": "https://github.com/style-dictionary/style-dictionary",
+      "license_url": "https://github.com/style-dictionary/style-dictionary",
+      "access": "open-source",
+      "tags": [
+        "tokens",
+        "design"
+      ],
+      "notes": "Optional token compilation; review current license/version.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "pagefind",
+      "name": "Pagefind",
+      "url": "https://pagefind.app/",
+      "upstream": "https://github.com/Pagefind/pagefind",
+      "license_url": "https://github.com/Pagefind/pagefind",
+      "access": "open-source",
+      "tags": [
+        "search",
+        "content"
+      ],
+      "notes": "Static search candidate; check current license and version.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "i18next",
+      "name": "i18next",
+      "url": "https://www.i18next.com/",
+      "upstream": "https://github.com/i18next/i18next",
+      "license_url": "https://github.com/i18next/i18next",
+      "access": "open-source",
+      "tags": [
+        "localization"
+      ],
+      "notes": "Use only for multilingual requirements; no paid translation API.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "vite-pwa",
+      "name": "Vite PWA",
+      "url": "https://vite-pwa-org.netlify.app/",
+      "upstream": "https://github.com/vite-pwa/vite-plugin-pwa",
+      "license_url": "https://github.com/vite-pwa/vite-plugin-pwa",
+      "access": "open-source",
+      "tags": [
+        "pwa"
+      ],
+      "notes": "Optional offline/installable web app; validate cache updates.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "web-vitals",
+      "name": "Web Vitals",
+      "url": "https://web.dev/vitals/",
+      "upstream": "https://github.com/GoogleChrome/web-vitals",
+      "license_url": "https://github.com/GoogleChrome/web-vitals",
+      "access": "open-source",
+      "tags": [
+        "performance"
+      ],
+      "notes": "Local measurement; no third-party analytics transmission by default.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "json-schema",
+      "name": "JSON Schema",
+      "url": "https://json-schema.org/",
+      "upstream": "https://json-schema.org/specification",
+      "license_url": "https://json-schema.org/",
+      "access": "reference",
+      "tags": [
+        "validation"
+      ],
+      "notes": "Use specification to validate project contracts.",
+      "adoption": "review-required"
+    },
+    {
+      "id": "penpot",
+      "name": "Penpot",
+      "url": "https://penpot.app/",
+      "upstream": "https://github.com/penpot/penpot",
+      "license_url": "https://github.com/penpot/penpot",
+      "access": "open-source",
+      "tags": [
+        "design",
+        "tokens"
+      ],
+      "notes": "Prefer local or documented free access; hosted limits vary.",
+      "adoption": "review-required"
+    }
+  ]
+}
