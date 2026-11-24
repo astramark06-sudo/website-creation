@@ -16,6 +16,12 @@
 <label>Description<textarea id="description" rows="3" maxlength="1000"></textarea></label>
 <label>Color theme<select id="theme"><option value="teal">Teal</option><option value="blue">Blue</option><option value="plum">Plum</option></select></label>
 <div class="actions"><button id="new">New project</button><label>Import JSON<input id="import" type="file" accept=".json,application/json"></label><button id="save">Save JSON</button></div>
+<section id="ai-panel" hidden aria-labelledby="ai-heading">
+<h2 id="ai-heading">Local AI draft</h2>
+<p>Describe the site you want. The configured local model returns editable text and page structure, not executable code. Do not include private information.</p>
+<label>Website requirements<textarea id="ai-prompt" rows="5" maxlength="4000"></textarea></label>
+<button id="ai-draft" type="button">Generate draft with local AI</button>
+</section>
 <h2>Reference analysis</h2>
 <p>Use an authorized saved HTML file for structural hints. The source is not executed, copied into the draft or retained.</p>
 <label>Local HTML reference<input id="reference" type="file" accept=".html,.htm,text/html"></label>

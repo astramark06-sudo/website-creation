@@ -61,6 +61,15 @@ async function start(){
     const response=await fetch('/api/session');
     if(!response.ok)throw new Error('Session unavailable.');
     const session=await response.json();token=session.token;project=session.project;render();
+    $('ai-panel').hidden=!session.ai_enabled;
+    $('ai-draft').addEventListener('click',()=>run(async()=>{
+      const prompt=$('ai-prompt').value.trim();if(!prompt)throw new Error('Describe your website first.');
+      if(!confirm('Send these requirements to your configured offline model?'))return;
+      status('Generating local draft…');
+      const response=await request('/api/ai-draft',{prompt,confirmed:true});const result=await response.json();
+      if(confirm('Replace the current project with this unapproved AI draft?')){project=result.project;dirty();render();$('frame').srcdoc='';status('AI draft created. Review content, design and functionality before publishing.');}
+      else status('Existing project unchanged.');
+    }));
     for(const k of ['title','description','theme'])$(k).addEventListener('input',()=>{project[k]=$(k).value;dirty();});
     $('new').addEventListener('click',()=>{if(confirm('Replace the current draft?')){project=fresh();dirty();render();$('frame').srcdoc='';}});
     $('add-page').addEventListener('click',()=>{if(project.pages.length>=20){status('Maximum 20 pages.');return;}let n=2;while(project.pages.some(p=>p.slug==='page-'+n))n++;project.pages.push(blank('page-'+n));dirty();render();});
