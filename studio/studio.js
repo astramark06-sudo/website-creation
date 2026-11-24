@@ -70,6 +70,18 @@ async function start(){
       if(!confirm('Replace the current draft with this imported project?'))return;
       project=candidate;dirty();render();$('frame').srcdoc='';status('Imported as an unapproved draft.');
     }catch(e){status(e.message);}finally{$('import').value='';}});
+    $('analyze-reference').addEventListener('click',()=>run(async()=>{
+      const file=$('reference').files[0];
+      if(!file || !$('reference-authorized').checked)throw new Error('Select an authorized local HTML file and confirm permission.');
+      if(file.size>65536)throw new Error('Reference exceeds 64 KiB.');
+      const response=await request('/api/reference',{source:await file.text(),title:project.title,objective:project.description,authorized:true});
+      const result=await response.json();
+      $('reference-report').textContent=JSON.stringify({observations:result.observations,suggestions:result.suggestions,limitations:result.limitations},null,2);
+      if(confirm('Replace your current project with the independently authored starter draft?')){
+        project=result.project;dirty();render();$('frame').srcdoc='';status('Original reference-informed draft created. Review and customize its content.');
+      }else{status('Structural report created. Existing draft unchanged.');}
+      $('reference').value='';$('reference-authorized').checked=false;
+    }));
     $('save').addEventListener('click',()=>{project.review=approvals();download(new Blob([JSON.stringify(project,null,2)],{type:'application/json'}),'project.json');status('Draft JSON saved.');});
     $('viewport').addEventListener('change',()=>$('frame').style.width=$('viewport').value);
     $('preview').addEventListener('click',()=>run(async()=>{status('Generating preview…');const r=await request('/api/preview',{spec:project,slug:$('preview-page').value});$('frame').srcdoc=(await r.json()).html;status('Preview generated. Test interactions after export.');}));
