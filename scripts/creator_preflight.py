@@ -45,10 +45,11 @@ def prepare_draft(spec, output, *, engines):
         "bundle_available": passed,
     }
     output.mkdir(exist_ok=False)
-    # Preserve diagnostic evidence even for a failing browser check.
-    (output / "preflight-report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
+    # Write the archive before claiming it is available. The CI artifact step
+    # requires a completed evidence report; incomplete output is not uploaded.
     if passed:
         (output / "creator-project.zip").write_bytes(archive)
+    (output / "preflight-report.json").write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
     return report
 
 
