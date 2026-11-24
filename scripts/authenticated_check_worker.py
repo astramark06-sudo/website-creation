@@ -123,7 +123,17 @@ def check(engine):
                 with page.expect_response(lambda response: response.request.method == "POST" and urlsplit(response.url).path == "/login/") as submitted:
                     page.get_by_role("button", name="Sign in", exact=True).click()
                 if submitted.value.status != 302:
-                    raise AuditFailure("Sign-in form did not redirect")
+                    response = submitted.value
+                    # Report only HTTP status and known fixed categories, never page
+                    # HTML, form values, cookie values or credential-bearing logs.
+                    body = response.text()
+                    reason = ("csrf" if "CSRF verification failed" in body else
+                              "invalid credentials" if "Please enter a correct" in body else
+                              "invalid form" if "errorlist" in body else "other response")
+                    names = {cookie["name"] for cookie in ctx.cookies()}
+                    has_csrf = "creator_staging_csrf" in names
+                    raise AuditFailure("Sign-in HTTP " + str(response.status) + "; " + reason +
+                                       "; CSRF cookie present: " + str(has_csrf))
                 expect(page.get_by_role("heading", name="Your workspaces")).to_be_visible()
                 cookies = [cookie for cookie in ctx.cookies() if cookie["name"] == "creator_staging_session"]
                 if len(cookies) != 1 or not cookies[0]["httpOnly"] or cookies[0]["sameSite"] != "Strict":
