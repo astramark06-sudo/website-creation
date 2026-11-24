@@ -19,7 +19,7 @@ except ImportError:
     from creator_design import DESIGN_CHOICES, DEFAULT_DESIGN
     from creator_plan import IMPORT_POLICY, load_catalog, search_sources, validate
 
-VERSION = "1.0.2"
+VERSION = "1.1.0"
 ROUTES = {
     "list_profiles": "/api/tools/profiles",
     "list_design_options": "/api/tools/design",
