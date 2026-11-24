@@ -43,7 +43,6 @@ def check_backup(source):
     # It prevents writes, locking, and creation of SQLite sidecar files.
     with closing(sqlite3.connect(source.as_uri() + "?mode=ro&immutable=1", uri=True, timeout=5)) as db:
         db.execute("PRAGMA query_only = ON")
-        db.execute("PRAGMA trusted_schema = OFF")
         return snapshot_report(db)
 
 
