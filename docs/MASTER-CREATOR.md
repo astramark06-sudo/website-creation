@@ -58,3 +58,19 @@ The four modes are landing, portfolio, documentation and task-dashboard. The fir
 Inspect only authorized local HTML. The inspector reports element counts, headings, language, viewport, missing alt attributes, script references counts and form-control counts. It never runs the document, requests external URLs, or returns text, asset URLs or form values. This is structural inspection, not visual reconstruction, a browser accessibility audit, screenshot-to-code, or backend recovery. The generated task dashboard is client-side only, not a shared database or authenticated backend.
 
 The repository tests validate generation and analysis; browser interaction verification remains a separate requirement. Do not claim full website replication from these starter capabilities.
+
+## Integrated project-to-publishing workflow
+
+The [example project](../projects/example.json) demonstrates a multi-page site with original content and optional browser-local interactions. It is deliberately not approved for publication. Copy it to a new project file, replace the example content with your own independently written content, select one of the three themes, and define each page's sections and interaction mode. Up to 20 pages are supported. No imported HTML, JavaScript or external URLs are interpreted as markup.
+
+```sh
+python scripts/creator_project.py build --spec projects/example.json --output build/preview
+python scripts/creator_project.py verify --spec projects/example.json --output build/preview
+python -m http.server 8000 --bind 127.0.0.1 --directory build/preview
+```
+
+Open localhost port 8000 to review the generated website. Confirm rights to all content, original composition, navigation, responsive appearance, keyboard access and functional interactions before publication. Compare any authorized reference using its general requirements, not copied source, text, branding or protected assets. The approval fields record human review; they are not plagiarism detection or a legal certification. Do not claim browser or device checks passed unless performed.
+
+To publish an approved project, commit its specification as `projects/publish.json` with all three review fields set to true. In GitHub repository settings enable Pages with GitHub Actions as the source. On main, manually dispatch the **Publish reviewed creator project** workflow and explicitly confirm publication. It runs the regression tests, generates and verifies the static output, then deploys through the GitHub Pages environment. It will fail if the specification is missing, unapproved or invalid. The public URL must be verified from the deployment result. No site is published by default; existing manual static-site deployment is unchanged.
+
+GitHub Pages supports static files and browser-side interactions, not private server code, login systems or shared databases. Full-stack apps, independently generated multi-user backends, visual editing and browser-rendered reference analysis require separate future modules and a suitable reviewed hosting profile. No paid service is introduced by this workflow.
