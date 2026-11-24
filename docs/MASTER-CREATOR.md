@@ -1,6 +1,6 @@
 # Master website creator
 
-This is a reusable zero-spend planning layer, not a deployed website or a hosted AI service.
+This is a reusable zero-spend planning and original website generation toolkit, not a deployed website or a hosted AI service.
 
 ## Discover and adopt
 
@@ -42,3 +42,19 @@ After selection, implement project-owned tokens and components, confirm licenses
 The catalogue now includes 31 source records. Search by purpose and import policy, then open the original source. Reference-only providers cannot be imported. Metered providers use only official retrieval and current allowances. Upstream-review candidates require item-level license and asset checks. The catalogue stores original metadata and links only; it does not mirror template code or designs.
 
 For a standalone free stack, choose a reviewed static generator or frontend framework, original components or a permissively licensed upstream source, and local editing/build tools. Paid marketplace assets, paid export features and hosted AI credits are not dependencies. Reconstruct authorized sites with original code and user-owned content, not proprietary demos, branding or protected assets. Public previews cannot reveal private server logic.
+
+## Original website builder and offline HTML inspection
+
+Generate a starter in a new directory with Python 3.10+:
+
+```sh
+python scripts/creator_build.py build --mode landing --title "My studio" --description "Original website starter" --output build/studio
+python scripts/creator_build.py build --mode task-dashboard --title "My tasks" --description "A local task workspace" --output build/tasks
+python scripts/creator_build.py inspect build/studio/index.html
+```
+
+The four modes are landing, portfolio, documentation and task-dashboard. The first three generate static HTML/CSS; task-dashboard adds original JavaScript for adding, completing and removing tasks with browser-local persistence. All outputs use system fonts, responsive layouts, no external requests and no paid dependencies. Use a new output directory; the generator refuses to overwrite existing files. Review placeholders before publishing. Serve generated files locally or deploy static output only after approval.
+
+Inspect only authorized local HTML. The inspector reports element counts, headings, language, viewport, missing alt attributes, script references counts and form-control counts. It never runs the document, requests external URLs, or returns text, asset URLs or form values. This is structural inspection, not visual reconstruction, a browser accessibility audit, screenshot-to-code, or backend recovery. The generated task dashboard is client-side only, not a shared database or authenticated backend.
+
+The repository tests validate generation and analysis; browser interaction verification remains a separate requirement. Do not claim full website replication from these starter capabilities.
