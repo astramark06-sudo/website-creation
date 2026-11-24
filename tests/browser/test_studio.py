@@ -243,16 +243,19 @@ class StudioBrowserTests(unittest.TestCase):
                 page = browser.new_page()
                 page.goto(url)
                 expect(page.locator("#status")).to_contain_text("Preview generated")
+                expect(page.locator("#preview")).to_be_enabled()
                 spec = read_spec(ROOT / "projects" / "example.json")
                 spec["title"] = "Old import response"
                 title = page.get_by_label("Website name")
                 page.evaluate("""() => {
                     const realFetch = window.fetch.bind(window);
                     window.fetch = async (...args) => {
-                        const response = await realFetch(...args);
-                        if (args[0] === '/api/import-project' || args[0] === '/api/import-bundle') {
-                            await new Promise(resolve => { window.releaseImportResponse = resolve; });
+                        if (args[0] !== '/api/import-project' && args[0] !== '/api/import-bundle') {
+                            return realFetch(...args);
                         }
+                        const gate = new Promise(resolve => { window.releaseImportResponse = resolve; });
+                        const response = realFetch(...args);
+                        await gate;
                         return response;
                     };
                 }""")
@@ -271,7 +274,12 @@ class StudioBrowserTests(unittest.TestCase):
                     "name": "draft.zip", "mimeType": "application/zip",
                     "buffer": export_zip(spec),
                 })
-                page.get_by_role("button", name="Verify and reopen ZIP").click()
+                expect(page.locator("#preview")).to_be_enabled()
+                expect(page.locator("#bundle-file")).to_be_visible()
+                page.wait_for_function("document.querySelector('#bundle-file').files.length === 1")
+                # Explicitly dispatch the click to test asynchronous state, independently
+                # of the browser's pointer hit testing or scroll position.
+                page.locator("#bundle-import").evaluate("(button) => button.click()")
                 page.wait_for_function("typeof window.releaseImportResponse === 'function'")
                 title.fill("Newer ZIP edit")
                 page.evaluate("() => { const release = window.releaseImportResponse; delete window.releaseImportResponse; release(); }")
