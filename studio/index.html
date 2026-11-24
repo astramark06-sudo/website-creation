@@ -23,6 +23,13 @@
 <label>Spacing<select id="density"><option value="comfortable">Comfortable</option><option value="spacious">Spacious</option></select></label>
 <label>Card style<select id="surface"><option value="rounded">Rounded</option><option value="square">Square</option><option value="flat">Flat</option></select></label>
 <div class="actions"><button id="new">New project</button><label>Import JSON<input id="import" type="file" accept=".json,application/json"></label><button id="save">Save JSON</button></div>
+<details id="bundle-panel">
+<summary>Reopen a verified static project ZIP</summary>
+<p>Only Studio static draft exports are accepted (up to 4 MiB). Verification compares the archive with the current generator without extraction or execution.</p>
+<label>Static project ZIP<input id="bundle-file" type="file" accept=".zip,application/zip"></label>
+<div class="actions"><button id="bundle-import" type="button">Verify and reopen ZIP</button><button id="bundle-save-report" type="button" disabled>Download ZIP verification report</button></div>
+<pre id="bundle-report" style="white-space:pre-wrap;overflow-wrap:anywhere" aria-live="polite"></pre>
+</details>
 <section id="ai-panel" hidden aria-labelledby="ai-heading">
 <h2 id="ai-heading">Local AI draft</h2>
 <p>Describe the site you want. The configured local model returns editable text and page structure, not executable code. Do not include private information.</p>
