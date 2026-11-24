@@ -14,7 +14,6 @@ Select the `search` interaction for a page to add a browser-local section filter
 
 Metrics render as a semantic description list, timelines as an ordered list, and tables use column headers with `scope="col"`, a hidden caption and a horizontally scrollable wrapper for narrow viewports. Cells and labels are escaped as plain text; the syntax does not permit HTML, scripts, URLs or formulas. The Firefox and WebKit coverage suite includes these component types across every supported layout.
 
-
 ## Page links and calls to action
 
 Choose the `links` component and enter up to eight `Link label | page-address` lines, for example `Explore the workspace | workspace` or `Back home | home`. Each target must be an existing generated page address; URLs, arbitrary markup and missing pages are rejected. Links use native anchors with the existing accent and focus styles. The preview remains inert; exported sites support normal navigation. After renaming or removing a page, update any links to its previous address. Browser checks follow each authored link at every supported viewport. No new libraries or external services are required.
