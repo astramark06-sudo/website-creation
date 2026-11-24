@@ -15,6 +15,7 @@ class ProjectBrowserTests(unittest.TestCase):
     def test_all_pages_all_widths(self):
         spec = read_spec(ROOT / "projects" / "example.json")
         spec["pages"][0]["sections"][0]["kind"] = "faq"
+        spec["pages"][0]["sections"][1].update(kind="links", body="Workspace | workspace\nHome | home")
         spec["pages"][0]["title"] = "LongTitle" * 10
         report = check_browser(spec, engine=browser_engine())
         self.assertEqual(report["status"], "passed", report["findings"])
@@ -27,6 +28,7 @@ class ProjectBrowserTests(unittest.TestCase):
             self.assertTrue(result["checks"]["labeled_form_controls"])
             self.assertTrue(result["checks"]["skip_target_focus"])
             self.assertTrue(result["checks"]["named_buttons_and_links"])
+            self.assertTrue(result["checks"]["page_links"])
             self.assertEqual(result["diagnostics"], [])
 
     def test_refuse_tampered_output(self):
