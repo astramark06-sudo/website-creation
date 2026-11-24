@@ -40,3 +40,15 @@ class MembershipEvent(models.Model):
     role = models.CharField(max_length=12)
     active = models.BooleanField()
     created = models.DateTimeField(auto_now_add=True)
+
+
+class LoginBudget(models.Model):
+    """One fixed-size local installation-wide attempt budget."""
+    window_start = models.PositiveBigIntegerField()
+    attempts = models.PositiveIntegerField()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(id=1), name="staging_single_login_budget"),
+            models.CheckConstraint(condition=models.Q(attempts__lte=10), name="staging_login_budget_bound"),
+        ]

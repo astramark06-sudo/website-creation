@@ -1,10 +1,11 @@
-from django.contrib.auth.views import LoginView, LogoutView
+from django.contrib.auth.views import LogoutView
+from .login_guard import LocalLoginView
 from django.urls import path
 from . import views, html_views
 
 urlpatterns = [
     path("", views.home, name="home"),
-    path("login/", LoginView.as_view(template_name="staging_auth/login.html"), name="login"),
+    path("login/", LocalLoginView.as_view(template_name="staging_auth/login.html"), name="login"),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("assets/staging.css", html_views.stylesheet, name="staging-style"),
     path("workspaces/<slug:slug>/", html_views.workspace_page, name="workspace"),
