@@ -30,6 +30,18 @@ python scripts/creator_preflight.py --spec projects/example.json --output prefli
 
 A failed browser result retains diagnostic evidence but no ZIP. Missing input, unavailable browser dependencies or invalid evidence can fail before a report exists. No existing output directory is overwritten.
 
+### Verify a downloaded preflight
+
+After downloading and unpacking the outer GitHub artifact into a private directory, leave the inner `creator-project.zip` unextracted. From the matching repository revision, run:
+
+```sh
+python scripts/creator_preflight_verify.py preflight --engine chromium --engine firefox --engine webkit
+```
+
+The verifier checks the archive against the current generator, recomputes static release gates, and checks reported browser coverage, individual checks and matching fingerprints. It needs no installed browser, modifies neither input file, and rejects mismatched, incomplete or failing reports. The optional repeated engine argument requires an exact set of reported engines. Omit it to accept any supported nonempty engine set. The manual workflow runs this independent consistency check before uploading a passing draft.
+
+A passing consistency check does not authenticate a report, prove that a browser actually ran, or authorize publication. An unsigned report can be fabricated; use trusted CI results or rerun browser tests for execution evidence. Older artifacts may require the generator revision that produced them.
+
 ## Optional project-specific browser evidence
 
 Install the pinned optional browser test tool (`python -m pip install playwright==1.51.0`) and install Chromium (`python -m playwright install chromium`). On supported Linux CI environments the existing browser workflow installs system dependencies. Start the studio with `python scripts/creator_studio.py --browser-checks` to enable the separate browser report controls. Select Chromium, Firefox or WebKit in the static-site browser panel and confirm the check. Choose **Run combined release check** to generate a single build and browser report for the selected engine; download it using **Download review report**. Install the selected engine before use. Changing the selected engine or editing the project invalidates its report; downloaded files identify the engine. The normal studio still needs no extra runtime dependencies.
