@@ -11,6 +11,7 @@ from scripts.creator_studio import make_handler
 from scripts.creator_project import build, read_spec, verify
 from scripts.creator_release import release_report
 from scripts.creator_preflight import prepare_draft
+from scripts.creator_preflight_verify import check_preflight
 from scripts.creator_bundle import read_verified_bundle
 from test_studio import serve
 
@@ -43,6 +44,9 @@ class ReleaseBrowserTests(unittest.TestCase):
             self.assertEqual(report["release"]["files"], evidence["files"])
             self.assertEqual(report["release"]["project_sha256"], evidence["project_sha256"])
             self.assertEqual(report["release"]["browser_reports"][0]["browser"], browser_engine())
+            checked = check_preflight(output, required_engines=[browser_engine()])
+            self.assertEqual(checked["status"], "passed")
+            self.assertFalse(checked["browser_tests_rerun"])
 
     def test_combined_report_studio_consent_and_invalidation(self):
         root = Path(__file__).resolve().parents[2]
