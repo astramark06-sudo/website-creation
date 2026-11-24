@@ -3,7 +3,7 @@ import json
 import unittest
 from unittest.mock import patch, MagicMock
 
-from scripts.creator_ai import generate_draft, installed_model, local_request
+from scripts.creator_ai import generate_draft, installed_model, local_request, parse_model_json, MAX_JSON_DEPTH
 
 
 class CreatorAITests(unittest.TestCase):
@@ -54,6 +54,16 @@ class CreatorAITests(unittest.TestCase):
                 factory.return_value.open.return_value = response
                 with self.assertRaises(ValueError):
                     local_request("/api/tags")
+
+    def test_fixed_depth_and_finite_float_boundary(self):
+        quoted = 'Text with ' + "[" * 100 + ' and a "quoted" value'
+        self.assertEqual(parse_model_json(json.dumps({"text": quoted})), {"text": quoted})
+        self.assertEqual(parse_model_json("[" * MAX_JSON_DEPTH + "0" + "]" * MAX_JSON_DEPTH),
+                         json.loads("[" * MAX_JSON_DEPTH + "0" + "]" * MAX_JSON_DEPTH))
+        for raw in ("[" * (MAX_JSON_DEPTH + 1) + "]" * (MAX_JSON_DEPTH + 1),
+                    '{"value": 1e999}', '{"value": -1e999}', ']["'):
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                parse_model_json(raw)
 
     def test_inventory_requires_valid_size_and_digest(self):
         for size, digest in ((True, "example"), (100, True), (100, " "), (0, "example")):
