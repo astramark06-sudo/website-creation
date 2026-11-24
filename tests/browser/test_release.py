@@ -21,6 +21,43 @@ class ReleaseBrowserTests(unittest.TestCase):
         self.assertEqual(report["browser_reports"][0]["files"], report["files"])
         self.assertFalse(report["publication_ready"])
 
+    def test_combined_report_studio_consent_and_invalidation(self):
+        root = Path(__file__).resolve().parents[2]
+        spec = read_spec(root / "projects" / "example.json")
+        report = release_report(spec)
+        report["browser_reports"] = [{"browser": "firefox", "status": "passed"}]
+        with patch("scripts.creator_studio.release_report", return_value=report) as check:
+            with sync_playwright() as pw, serve(lambda port: make_handler(port, "combined-test", browser_checks=True)) as url:
+                browser = launch_browser(pw)
+                try:
+                    page = browser.new_page(accept_downloads=True)
+                    page.goto(url)
+                    expect(page.locator("#status")).to_contain_text("Preview generated")
+                    engine = page.get_by_label("Static site browser engine")
+                    engine.select_option("firefox")
+                    button = page.get_by_role("button", name="Run combined release check")
+                    page.once("dialog", lambda dialog: dialog.dismiss())
+                    button.click()
+                    self.assertEqual(check.call_count, 0)
+                    page.once("dialog", lambda dialog: dialog.accept())
+                    button.click()
+                    expect(page.locator("#release-status")).to_contain_text("Combined report generated")
+                    self.assertEqual(check.call_args.kwargs["engines"], ["firefox"])
+                    save = page.get_by_role("button", name="Download review report")
+                    with page.expect_download() as download:
+                        save.click()
+                    self.assertEqual(json.loads(download.value.path().read_text()), report)
+                    engine.select_option("webkit")
+                    expect(save).to_be_disabled()
+                    expect(page.locator("#release-status")).to_contain_text("Browser changed")
+                    headers = {"Origin": url, "X-Creator-Token": "combined-test"}
+                    response = page.request.post(url + "/api/release-report", headers=headers,
+                                                 data={"confirmed": False, "engines": ["firefox"], "spec": spec})
+                    self.assertEqual(response.status, 400)
+                    self.assertEqual(check.call_count, 1)
+                finally:
+                    browser.close()
+
     def test_browser_engine_selection_and_report_invalidation(self):
         report = {"status": "passed", "browser": "firefox", "results": [{"page": "index.html"}],
                   "viewports": [360, 768, 1440], "findings": [], "limitations": []}
