@@ -158,9 +158,9 @@ def make_handler(port, token, ai_model=None, browser_checks=False, vision_model=
                     if not browser_checks:
                         self.send_json(403, {"error": "Browser checks are not enabled"})
                         return
-                    if payload.get("confirmed") is not True:
+                    if set(payload) not in ({"spec", "confirmed"}, {"spec", "confirmed", "engine"}) or payload.get("confirmed") is not True:
                         raise ValueError("Browser check consent required")
-                    self.send_json(200, check_browser(draft_spec(payload["spec"])))
+                    self.send_json(200, check_browser(draft_spec(payload["spec"]), engine=payload.get("engine", "chromium")))
                 elif self.path == "/api/release-report":
                     self.send_json(200, release_report(draft_spec(payload["spec"])))
                 elif self.path == "/api/tool-overview":
@@ -223,7 +223,7 @@ def main():
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--local-model", help="Opt in to an already installed offline Ollama model")
     parser.add_argument("--vision-model", help="Opt in to an already installed local Ollama vision model")
-    parser.add_argument("--browser-checks", action="store_true", help="Enable optional installed Chromium testing")
+    parser.add_argument("--browser-checks", action="store_true", help="Enable optional installed browser testing")
     args = parser.parse_args()
     if any(model and not valid_model(model) for model in (args.local_model, args.vision_model)):
         parser.error("Use a local model name, not a cloud model")
