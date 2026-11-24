@@ -7,7 +7,7 @@ import unittest
 import warnings
 import zipfile
 
-from scripts.creator_bundle import verify_bundle, MAX_ARCHIVE
+from scripts.creator_bundle import verify_bundle, read_verified_bundle, MAX_ARCHIVE
 from scripts.creator_project import read_spec
 from scripts.creator_studio import export_zip
 
@@ -36,6 +36,13 @@ class BundleTests(unittest.TestCase):
         self.assertIn("index.html", report["files"])
         self.assertFalse(report["publication_ready"])
         self.assertEqual(len(report["archive_sha256"]), 64)
+
+    def test_verified_bundle_returns_only_validated_draft_and_evidence(self):
+        spec, report = read_verified_bundle(self.data)
+        self.assertEqual(spec, self.spec)
+        self.assertEqual(report, verify_bundle(self.data))
+        self.assertFalse(any(spec["review"].values()))
+        self.assertNotIn("project", report)
 
     def test_tamper_extra_and_missing_entries_rejected(self):
         for data in (
