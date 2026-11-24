@@ -15,6 +15,7 @@ try:
     from .creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec, spec_bytes, unique_object, reject_constant
     from .creator_reference import reference_plan
     from .creator_ai import generate_draft, valid_model
+    from .creator_vision import vision_plan
     from .creator_fullstack import export_fullstack
     from .creator_relational_export import export_relational
     from .creator_relational import validate_schema
@@ -27,6 +28,7 @@ except ImportError:
     from creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec, spec_bytes, unique_object, reject_constant
     from creator_reference import reference_plan
     from creator_ai import generate_draft, valid_model
+    from creator_vision import vision_plan
     from creator_fullstack import export_fullstack
     from creator_relational_export import export_relational
     from creator_relational import validate_schema
@@ -71,7 +73,7 @@ def export_zip(spec):
         return result.getvalue()
 
 
-def make_handler(port, token, ai_model=None, browser_checks=False):
+def make_handler(port, token, ai_model=None, browser_checks=False, vision_model=None):
     host = f"127.0.0.1:{port}"
     origin = "http://" + host
 
@@ -114,7 +116,7 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
                       "/visual-reference.js": ("visual-reference.js", "text/javascript; charset=utf-8"),
                       "/relational-designer.js": ("relational-designer.js", "text/javascript; charset=utf-8")}
             if self.path == "/api/session":
-                self.send_json(200, {"token": token, "project": read_spec(ROOT / "projects" / "example.json"), "ai_enabled": ai_model is not None, "browser_checks_enabled": browser_checks})
+                self.send_json(200, {"token": token, "project": read_spec(ROOT / "projects" / "example.json"), "ai_enabled": ai_model is not None, "vision_enabled": vision_model is not None, "browser_checks_enabled": browser_checks})
             elif self.path in routes:
                 name, mime = routes[self.path]
                 self.send_data(200, (UI / name).read_bytes(), mime)
@@ -127,7 +129,7 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
             if self.headers.get("Origin") != origin or not secrets.compare_digest(self.headers.get("X-Creator-Token", ""), token):
                 self.send_json(403, {"error": "Local session required"})
                 return
-            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/relational-export", "/api/relational-validate", "/api/relational-check", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check", "/api/visual-reference"):
+            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/relational-export", "/api/relational-validate", "/api/relational-check", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check", "/api/visual-reference", "/api/vision-reference"):
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
@@ -183,6 +185,14 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
                 elif self.path == "/api/fullstack-export":
                     data = export_fullstack(payload["title"], payload["description"], payload.get("model", "records"), payload.get("fields"))
                     self.send_data(200, data, "application/zip", {"Content-Disposition": 'attachment; filename="local-data-workspace.zip"'})
+                elif self.path == "/api/vision-reference":
+                    if not vision_model:
+                        self.send_json(403, {"error": "Local vision is not enabled"})
+                        return
+                    if set(payload) != {"image", "title", "objective", "authorized"}:
+                        raise ValueError("Invalid vision request")
+                    self.send_json(200, vision_plan(payload["image"], payload["title"], payload["objective"],
+                                                    payload["authorized"], vision_model))
                 elif self.path == "/api/visual-reference":
                     self.send_json(200, visual_plan(payload["observations"], payload["title"], payload["objective"], payload["authorized"]))
                 elif self.path == "/api/reference":
@@ -202,13 +212,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--local-model", help="Opt in to an already installed offline Ollama model")
+    parser.add_argument("--vision-model", help="Opt in to an already installed local Ollama vision model")
     parser.add_argument("--browser-checks", action="store_true", help="Enable optional installed Chromium testing")
     args = parser.parse_args()
-    if args.local_model and not valid_model(args.local_model):
+    if any(model and not valid_model(model) for model in (args.local_model, args.vision_model)):
         parser.error("Use a local model name, not a cloud model")
     if not 1024 <= args.port <= 65535:
         parser.error("Choose a port from 1024 to 65535")
-    with ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(args.port, secrets.token_urlsafe(32), args.local_model, args.browser_checks)) as server:
+    with ThreadingHTTPServer(("127.0.0.1", args.port), make_handler(args.port, secrets.token_urlsafe(32), args.local_model, args.browser_checks, args.vision_model)) as server:
         print(f"Master Creator: http://127.0.0.1:{args.port} (local only)")
         try:
             server.serve_forever()
