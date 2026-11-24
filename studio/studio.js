@@ -161,6 +161,30 @@ async function start(){
       if(!confirm('Replace the current draft with this imported project?'))return;
       project=candidate;dirty();render();$('frame').srcdoc='';status('Imported as an unapproved draft.');
     }catch(e){status(e.message);}finally{$('import').value='';}});
+    let bundleSelection=0,bundleEvidence=null;
+    $('bundle-file').addEventListener('change',()=>{
+      bundleSelection++;bundleEvidence=null;$('bundle-save-report').disabled=true;$('bundle-report').textContent='';
+    });
+    $('bundle-save-report').addEventListener('click',()=>{
+      if(bundleEvidence)download(new Blob([JSON.stringify(bundleEvidence,null,2)],{type:'application/json'}),'bundle-evidence.json');
+    });
+    $('bundle-import').addEventListener('click',()=>run(async()=>{
+      const file=$('bundle-file').files[0],selection=bundleSelection,revision=draftRevision;
+      const current=()=>selection===bundleSelection&&$('bundle-file').files[0]===file&&revision===draftRevision;
+      bundleEvidence=null;$('bundle-save-report').disabled=true;$('bundle-report').textContent='';
+      if(!file||!file.size||file.size>4194304)throw new Error('Choose a nonempty static project ZIP up to 4 MiB.');
+      status('Verifying project ZIP locally…');
+      try{
+        const response=await fetch('/api/import-bundle',{method:'POST',headers:{'Content-Type':'application/zip','X-Creator-Token':token},body:file});
+        if(!current()){status('ZIP selection or draft changed. Reopening discarded.');return;}
+        if(!response.ok)throw new Error('ZIP verification failed. Use an unchanged static Studio export from the current generator.');
+        const result=await response.json();
+        if(!current()){status('ZIP selection or draft changed. Reopening discarded.');return;}
+        bundleEvidence=result.report;$('bundle-report').textContent=JSON.stringify(bundleEvidence,null,2);$('bundle-save-report').disabled=false;
+        if(!confirm('ZIP verified. Replace the current draft with its project specification?')){status('ZIP verified. Existing draft unchanged.');return;}
+        project=result.project;dirty();render();$('frame').srcdoc='';status('Verified ZIP reopened as an unapproved draft.');
+      }catch(e){if(current())throw e;}
+    }));
     $('analyze-reference').addEventListener('click',()=>run(async()=>{
       const file=$('reference').files[0];
       if(!file || !$('reference-authorized').checked)throw new Error('Select an authorized local HTML file and confirm permission.');
