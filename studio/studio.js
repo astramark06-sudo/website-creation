@@ -1,13 +1,13 @@
 'use strict';
 const $ = id => document.getElementById(id);
-let project, token, busy = false, latestRelease = null, latestBrowser = null, draftRevision = 0;
+let project, token, busy = false, latestRelease = null, latestBrowser = null, draftRevision = 0, browserRevision = 0;
 let invalidateRelationalCheck = () => {};
 const status = text => { $('status').textContent = text; };
 const defaultDesign = () => ({layout:'grid',typeface:'system',density:'comfortable',surface:'rounded'});
 const approvals = () => ({content_rights_confirmed:false, originality_reviewed:false, publish_approved:false});
 const blank = slug => ({slug,title:slug==='home'?'Home':'New page',intro:'Write an original introduction.',sections:[{heading:'Section',body:'Add original content.'}],interaction:'none'});
 const fresh = () => ({version:1,title:'My website',description:'Describe your website.',theme:'teal',pages:[blank('home')],review:approvals()});
-function dirty(){invalidateRelationalCheck();project.review=approvals();draftRevision++;latestRelease=null;latestBrowser=null;$('browser-save').disabled=true;$('browser-check-results').replaceChildren();$('browser-check-status').textContent='Draft changed. Run new browser checks.';$('release-save').disabled=true;$('release-results').replaceChildren();$('release-status').textContent='Draft changed. Run a new release check.';status('Draft changed. Refresh preview or export.');}
+function dirty(){invalidateRelationalCheck();project.review=approvals();draftRevision++;browserRevision++;latestRelease=null;latestBrowser=null;$('browser-save').disabled=true;$('browser-check-results').replaceChildren();$('browser-check-status').textContent='Draft changed. Run new browser checks.';$('release-save').disabled=true;$('release-results').replaceChildren();$('release-status').textContent='Draft changed. Run a new release check.';status('Draft changed. Refresh preview or export.');}
 function action(parent,label,fn){
   const b=document.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',fn);parent.append(b);
 }
@@ -226,21 +226,28 @@ async function start(){
         $('release-status').textContent='Report generated. Human and project-specific testing gates remain.';
       }catch(e){if(revision===draftRevision)$('release-status').textContent='Release check failed: '+e.message;throw e;}
     }));
+    $('browser-check-engine').addEventListener('change',()=>{
+      browserRevision++;latestBrowser=null;$('browser-save').disabled=true;$('browser-check-results').replaceChildren();
+      $('browser-check-status').textContent='Browser changed. Run new browser checks.';
+    });
     $('browser-check').addEventListener('click',()=>run(async()=>{
-      const revision=draftRevision;
+      if(!session.browser_checks_enabled)return;
+      const engine=$('browser-check-engine').value;
+      if(!confirm('Run checks on this generated static site using the selected locally installed browser?'))return;
+      const revision=++browserRevision;
       latestBrowser=null;$('browser-save').disabled=true;$('browser-check-results').replaceChildren();
-      $('browser-check-status').textContent='Running local Chromium checks…';
+      $('browser-check-status').textContent='Running local '+engine+' checks…';
       try{
-        const result=await(await request('/api/browser-check',{spec:project,confirmed:true})).json();
-        if(revision!==draftRevision)return;
+        const result=await(await request('/api/browser-check',{spec:project,engine,confirmed:true})).json();
+        if(revision!==browserRevision||engine!==$('browser-check-engine').value)return;
         latestBrowser=result;$('browser-save').disabled=false;
         $('browser-check-status').textContent=result.status+' — '+result.results.length+' page/viewport checks. Not a full accessibility or deployment audit.';
         const pre=document.createElement('pre');pre.style.whiteSpace='pre-wrap';pre.style.overflowWrap='anywhere';
         pre.textContent=JSON.stringify({browser:result.browser,viewports:result.viewports,findings:result.findings,limitations:result.limitations},null,2);
         $('browser-check-results').append(pre);
-      }catch(e){if(revision===draftRevision)$('browser-check-status').textContent='Browser check failed. Confirm Playwright and Chromium are installed and the draft is valid.';throw e;}
+      }catch(e){if(revision===browserRevision)$('browser-check-status').textContent='Browser check failed. Confirm Playwright and the selected browser are installed and the draft is valid.';throw e;}
     }));
-    $('browser-save').addEventListener('click',()=>{if(latestBrowser)download(new Blob([JSON.stringify(latestBrowser,null,2)],{type:'application/json'}),'creator-browser-report.json');});
+    $('browser-save').addEventListener('click',()=>{if(latestBrowser)download(new Blob([JSON.stringify(latestBrowser,null,2)],{type:'application/json'}),'creator-browser-'+latestBrowser.browser+'-report.json');});
     $('release-save').addEventListener('click',()=>{
       if(latestRelease)download(new Blob([JSON.stringify(latestRelease,null,2)],{type:'application/json'}),'creator-release-report.json');
     });
