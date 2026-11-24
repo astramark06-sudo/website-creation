@@ -155,12 +155,24 @@ async function start(){
     for(const k of Object.keys(defaultDesign()))$(k).addEventListener('input',()=>{project.design={...(project.design||defaultDesign()),[k]:$(k).value};dirty();});
     $('new').addEventListener('click',()=>{if(confirm('Replace the current draft?')){project=fresh();dirty();render();$('frame').srcdoc='';}});
     $('add-page').addEventListener('click',()=>{if(project.pages.length>=20){status('Maximum 20 pages.');return;}let n=2;while(project.pages.some(p=>p.slug==='page-'+n))n++;project.pages.push(blank('page-'+n));dirty();render();});
-    $('import').addEventListener('change',async()=>{try{
-      const file=$('import').files[0];if(!file)return;if(file.size>131072)throw new Error('Project exceeds 128 KiB.');
-      const candidate=JSON.parse(await file.text());await request('/api/preview',{spec:candidate,slug:'home'});
-      if(!confirm('Replace the current draft with this imported project?'))return;
-      project=candidate;dirty();render();$('frame').srcdoc='';status('Imported as an unapproved draft.');
-    }catch(e){status(e.message);}finally{$('import').value='';}});
+    let importRevision=0;
+    $('import').addEventListener('change',async()=>{
+      const selection=++importRevision,revision=draftRevision,file=$('import').files[0];
+      const selected=()=>selection===importRevision&&$('import').files[0]===file;
+      const current=()=>selected()&&revision===draftRevision;
+      try{
+        if(!file)return;
+        if(!file.size||file.size>131072)throw new Error('Choose a nonempty project JSON up to 128 KiB.');
+        const response=await fetch('/api/import-project',{method:'POST',headers:{'Content-Type':'application/json','X-Creator-Token':token},body:file});
+        if(!current()){if(selected())status('Draft changed. Import discarded.');return;}
+        if(!response.ok)throw new Error('Invalid project JSON or unsupported project specification.');
+        const result=await response.json();
+        if(!current()){if(selected())status('Draft changed. Import discarded.');return;}
+        if(!confirm('Replace the current draft with this imported project?')){status('Import cancelled. Existing draft unchanged.');return;}
+        project=result.project;dirty();render();$('frame').srcdoc='';status('Imported as an unapproved draft.');
+      }catch(e){if(current())status(e.message||'Project import failed.');}
+      finally{if(selected())$('import').value='';}
+    });
     $('analyze-reference').addEventListener('click',()=>run(async()=>{
       const file=$('reference').files[0];
       if(!file || !$('reference-authorized').checked)throw new Error('Select an authorized local HTML file and confirm permission.');
