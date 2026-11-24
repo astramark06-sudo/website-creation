@@ -217,7 +217,7 @@ async function start(){
     $('release-save').addEventListener('click',()=>{
       if(latestRelease)download(new Blob([JSON.stringify(latestRelease,null,2)],{type:'application/json'}),'creator-release-report.json');
     });
-    $('fullstack-export').addEventListener('click',()=>run(async()=>{status('Building local database app…');const r=await request('/api/fullstack-export',{title:project.title,description:project.description});download(await r.blob(),'local-data-workspace.zip');status('Local database app exported. Run server.py in the extracted folder.');}));
+    $('fullstack-export').addEventListener('click',()=>run(async()=>{status('Building local database app…');const r=await request('/api/fullstack-export',{title:project.title,description:project.description,model:$('fullstack-model').value});download(await r.blob(),'local-data-workspace.zip');status('Local database app exported. Run server.py in the extracted folder.');}));
     status('Ready.');$('preview').click();
   }catch(e){status('Unable to load studio: '+e.message);}
 }
