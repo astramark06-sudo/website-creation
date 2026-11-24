@@ -236,6 +236,51 @@ class StudioBrowserTests(unittest.TestCase):
             finally:
                 browser.close()
 
+    def test_delayed_imports_cannot_overwrite_newer_edits(self):
+        with sync_playwright() as pw, serve(lambda port: make_handler(port, "stale-import-test")) as url:
+            browser = launch_browser(pw)
+            try:
+                page = browser.new_page()
+                page.goto(url)
+                expect(page.locator("#status")).to_contain_text("Preview generated")
+                spec = read_spec(ROOT / "projects" / "example.json")
+                spec["title"] = "Old import response"
+                title = page.get_by_label("Website name")
+                page.evaluate("""() => {
+                    const realFetch = window.fetch.bind(window);
+                    window.fetch = async (...args) => {
+                        const response = await realFetch(...args);
+                        if (args[0] === '/api/import-project' || args[0] === '/api/import-bundle') {
+                            await new Promise(resolve => { window.releaseImportResponse = resolve; });
+                        }
+                        return response;
+                    };
+                }""")
+                page.locator("#import").set_input_files({
+                    "name": "draft.json", "mimeType": "application/json",
+                    "buffer": json.dumps(spec).encode(),
+                })
+                page.wait_for_function("typeof window.releaseImportResponse === 'function'")
+                title.fill("Newer JSON edit")
+                page.evaluate("() => { const release = window.releaseImportResponse; delete window.releaseImportResponse; release(); }")
+                expect(page.locator("#status")).to_contain_text("Import discarded")
+                expect(title).to_have_value("Newer JSON edit")
+
+                page.locator("#bundle-panel summary").click()
+                page.locator("#bundle-file").set_input_files({
+                    "name": "draft.zip", "mimeType": "application/zip",
+                    "buffer": export_zip(spec),
+                })
+                page.get_by_role("button", name="Verify and reopen ZIP").click()
+                page.wait_for_function("typeof window.releaseImportResponse === 'function'")
+                title.fill("Newer ZIP edit")
+                page.evaluate("() => { const release = window.releaseImportResponse; delete window.releaseImportResponse; release(); }")
+                expect(page.locator("#status")).to_contain_text("Reopening discarded")
+                expect(title).to_have_value("Newer ZIP edit")
+                expect(page.locator("#bundle-save-report")).to_be_disabled()
+            finally:
+                browser.close()
+
     def test_request_boundaries(self):
         with sync_playwright() as pw, serve(lambda port: make_handler(port, "test-token")) as url:
             request = pw.request.new_context()
