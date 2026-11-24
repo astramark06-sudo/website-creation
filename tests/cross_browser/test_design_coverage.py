@@ -8,6 +8,18 @@ from scripts.creator_project import read_spec
 
 ROOT = Path(__file__).resolve().parents[2]
 
+BODIES = {
+    "card": "First example\nSecond example",
+    "article": "First example\nSecond example",
+    "callout": "First example\nSecond example",
+    "faq": "First example\nSecond example",
+    "list": "First example\nSecond example",
+    "steps": "First example\nSecond example",
+    "metrics": "Users | 120\nProjects | 12",
+    "timeline": "Start | First example\nFinish | Second example",
+    "table": "Name | Value\nFirst | 1\nSecond | 2",
+}
+
 
 class DesignCoverage(unittest.TestCase):
     def test_component_layout_combinations(self):
@@ -19,9 +31,8 @@ class DesignCoverage(unittest.TestCase):
                                   "density": "comfortable", "surface": "rounded"}
                 spec["pages"][0]["interaction"] = "search"
                 spec["pages"][0]["sections"] = [
-                    {"kind": kind, "heading": "Original " + kind,
-                     "body": "First example\nSecond example"}
-                    for kind in ("card", "article", "callout", "faq", "list", "steps")
+                    {"kind": kind, "heading": "Original " + kind, "body": BODIES[kind]}
+                    for kind in BODIES
                 ]
                 report = check_browser(spec, engine=engine)
                 self.assertEqual(report["status"], "passed", report["findings"])
