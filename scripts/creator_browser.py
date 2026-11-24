@@ -153,6 +153,19 @@ def check_browser(spec, output=None, engine="chromium", publish=False):
                                     page.locator("#page-sections > :not([hidden])").count() == total and
                                     query.input_value() == ""
                                 )
+                            # Follow every authored page link from its original page.
+                            authored = page.locator(".component-links a")
+                            targets = authored.evaluate_all("(links) => links.map(a => a.getAttribute('href'))")
+                            checks["page_links"] = True
+                            for index, target in enumerate(targets):
+                                if target not in expected_pages:
+                                    checks["page_links"] = False
+                                    continue
+                                authored.nth(index).click()
+                                page.wait_for_load_state("load")
+                                if page.url != ORIGIN + "/" + target:
+                                    checks["page_links"] = False
+                                page.goto(ORIGIN + "/" + name)
                             # Follow one actual internal link (or the current page on a one-page site).
                             next_name = expected_pages[(expected_pages.index(name) + 1) % len(expected_pages)]
                             page.locator(f'nav a[href="{next_name}"]').click()
