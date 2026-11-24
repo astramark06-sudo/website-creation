@@ -36,14 +36,15 @@ function render(){
     field(card,'Interaction',p.interaction,v=>p.interaction=v,{choices:['none','tasks','search']});
     p.sections.forEach((s,j)=>{
       const block=document.createElement('div');block.className='section-card';
-      field(block,'Component type',s.kind||'card',v=>{s.kind=v;render();},{choices:['card','article','callout','faq','list','steps','metrics','timeline','table']});
+      field(block,'Component type',s.kind||'card',v=>{s.kind=v;render();},{choices:['card','article','callout','faq','list','steps','metrics','timeline','table','links']});
       field(block,'Section heading',s.heading,v=>s.heading=v,{max:120});
       field(block,'Section body',s.body,v=>s.body=v,{multiline:true,max:4000});
       const hints={
         list:'One item per line (up to 30).',steps:'One step per line (up to 30).',
         metrics:'One metric per line: Label | Value (up to 12).',
         timeline:'One event per line: Label | Details (up to 20).',
-        table:'First line is the header; use 2–6 pipe-separated cells per row and up to 30 data rows.'
+        table:'First line is the header; use 2–6 pipe-separated cells per row and up to 30 data rows.',
+        links:'One link per line: Link label | page-address (up to 8). Use an existing page address, e.g. Home | home. Update links if a page is renamed or removed.'
       };
       if(hints[s.kind]){const hint=document.createElement('p');hint.className='section-hint';hint.textContent=hints[s.kind];block.append(hint);}
       const handle=document.createElement('button');handle.type='button';handle.className='drag-handle';handle.draggable=true;handle.textContent='Drag to reorder';handle.setAttribute('aria-label','Drag section '+(j+1)+' to reorder; use move buttons for keyboard ordering');

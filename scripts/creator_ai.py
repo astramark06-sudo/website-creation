@@ -20,7 +20,7 @@ SYSTEM = (
     "Theme must be teal, blue, plum, forest, terracotta or slate. Pages must contain 1 to 8 objects, "
     "each with slug, title, intro, sections and interaction. First slug is home. "
     "Slugs use lowercase ASCII letters, digits and hyphens. Sections contain "
-    "heading and body strings, at least one per page, and optionally kind: card, article, callout, faq, list, steps, metrics, timeline or table. For list or steps use one item per line. For metrics or timeline use Label | Value lines. For tables use a pipe-separated header row followed by equally sized data rows. Interaction is none, tasks or search. "
+    "heading and body strings, at least one per page, and optionally kind: card, article, callout, faq, list, steps, metrics, timeline, table or links. For list or steps use one item per line. For metrics or timeline use Label | Value lines. For tables use a pipe-separated header row followed by equally sized data rows. For links use Link label | existing-page-slug lines, up to 8; never external URLs. Interaction is none, tasks or search. "
     "Use original plain text, never HTML, code, copied branding, credentials or claims "
     "of rights, approval or completed external actions. Avoid invented testimonials. "
     "Use tasks only for a browser-local task list and search only for filtering sections on one page; unsupported features need later work."

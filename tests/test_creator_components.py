@@ -17,6 +17,7 @@ SAMPLES = {
     "metrics": "Users | 120\nGrowth | <script>",
     "timeline": "Start | First <script>\nFinish | Second",
     "table": "Name | Value\nFirst | <script>",
+    "links": "First <script> | workspace\nHome | home",
 }
 
 
@@ -47,9 +48,24 @@ class ComponentTests(unittest.TestCase):
                 if kind == "metrics":
                     self.assertIn("<dl>", files["index.html"])
                     self.assertIn("<dt>Users</dt><dd>120</dd>", files["index.html"])
+                if kind == "links":
+                    self.assertIn('href="workspace.html"', files["index.html"])
+                    self.assertIn('href="index.html"', files["index.html"])
                 if kind == "table":
                     self.assertIn('<th scope="col">Name</th>', files["index.html"])
                     self.assertIn("<td>First</td>", files["index.html"])
+
+    def test_links_reject_unknown_or_external_destinations(self):
+        for body in ("Missing | missing", "External | https://example.invalid",
+                     "Escape | ../outside", "Malformed | home | workspace",
+                     "Empty | ", "\n".join("Link | home" for _ in range(9))):
+            with self.subTest(body=body), self.assertRaises(ValueError):
+                self.section.update(kind="links", body=body)
+                validate_spec(self.spec)
+        self.section.update(kind="links", body="Open workspace | workspace")
+        self.spec["pages"][1]["slug"] = "renamed"
+        with self.assertRaises(ValueError):
+            validate_spec(self.spec)
 
     def test_unknown_kind_rejected(self):
         self.section["kind"] = "script"

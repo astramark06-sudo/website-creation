@@ -1,7 +1,8 @@
 """Independently authored, bounded section components for original websites."""
 import html
+import re
 
-KINDS = ("card", "article", "callout", "faq", "list", "steps", "metrics", "timeline", "table")
+KINDS = ("card", "article", "callout", "faq", "list", "steps", "metrics", "timeline", "table", "links")
 
 COMPONENT_CSS = """
 .component-article, .component-callout, .component-faq, .component-list, .component-steps,
@@ -30,6 +31,23 @@ COMPONENT_CSS = """
 .component-table th { background: #f2f5f8; }
 .component-caption { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 """
+
+
+# Appended only for projects using the new component; existing output is unchanged.
+LINKS_CSS = """
+.component-links { min-width: 0; }
+.component-links ul { display: flex; flex-wrap: wrap; gap: .75rem; list-style: none; padding: 0; }
+.component-links li { min-width: 0; max-width: 100%; }
+.component-links a { max-width: 100%; overflow-wrap: anywhere; text-decoration: underline; }
+"""
+
+
+def links(body):
+    result = pairs(body, "Page links", 8)
+    for label, target in result:
+        if len(label) > 120 or not re.fullmatch(r"[a-z][a-z0-9-]{0,47}", target):
+            raise ValueError("Page links require a short label and an existing page address")
+    return result
 
 
 def lines(body):
@@ -84,6 +102,8 @@ def validate_component(section):
         pairs(body, "Timeline", 20)
     elif kind == "table":
         table_rows(body)
+    elif kind == "links":
+        links(body)
 
 
 def render_component(section):
@@ -112,6 +132,12 @@ def render_component(section):
             for label, value in pairs(section["body"], "Timeline", 20)
         )
         return f'<article class="card component-timeline"><h2>{heading}</h2><ol>{items}</ol></article>'
+    if kind == "links":
+        items = "".join(
+            f'<li><a class="button" href="{html.escape("index.html" if target == "home" else target + ".html")}">{html.escape(label)}</a></li>'
+            for label, target in links(section["body"])
+        )
+        return f'<article class="card component-links"><h2>{heading}</h2><ul>{items}</ul></article>'
     if kind == "table":
         rows = table_rows(section["body"])
         head = "".join(f'<th scope="col">{html.escape(cell)}</th>' for cell in rows[0])
@@ -123,7 +149,5 @@ def render_component(section):
 
 
 def component_css(spec):
-    return COMPONENT_CSS if any(
-        section.get("kind", "card") != "card"
-        for page in spec["pages"] for section in page["sections"]
-    ) else ""
+    kinds = {section.get("kind", "card") for page in spec["pages"] for section in page["sections"]}
+    return (COMPONENT_CSS if kinds - {"card", "links"} else "") + (LINKS_CSS if "links" in kinds else "")

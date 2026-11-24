@@ -33,5 +33,30 @@ class ComponentBrowserTests(unittest.TestCase):
                 browser.close()
 
 
+    def test_page_links_editor_preview_and_validation(self):
+        with sync_playwright() as pw, serve(lambda port: make_handler(port, "page-links-test")) as url:
+            browser = launch_browser(pw)
+            try:
+                page = browser.new_page()
+                page.goto(url)
+                expect(page.locator("#status")).to_contain_text("Preview generated")
+                first = page.locator(".page-card").first.locator(".section-card").first
+                first.get_by_label("Component type").select_option("links")
+                first.get_by_label("Section heading").fill("Continue exploring")
+                body = first.get_by_label("Section body")
+                body.fill("Open workspace | workspace")
+                page.get_by_role("button", name="Refresh preview").click()
+                expect(page.locator("#status")).to_contain_text("Preview generated")
+                anchor = page.frame_locator("#frame").locator(".component-links a")
+                expect(anchor).to_have_text("Open workspace")
+                expect(anchor).to_have_attribute("data-preview-href", "workspace.html")
+                self.assertIsNone(anchor.get_attribute("href"))
+                body.fill("Missing | missing")
+                page.get_by_role("button", name="Refresh preview").click()
+                expect(page.locator("#status")).to_contain_text("Invalid project")
+            finally:
+                browser.close()
+
+
 if __name__ == "__main__":
     unittest.main()
