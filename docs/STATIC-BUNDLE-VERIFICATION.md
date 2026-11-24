@@ -1,6 +1,8 @@
 # Static project bundle verification
 
-The Studio exports an editable project specification and generated static files in a ZIP. Verify a bundle before extracting or opening it:
+The Studio exports an editable project specification and generated static files in a ZIP. In Studio, open **Reopen a verified static project ZIP**, choose the file and select **Verify and reopen ZIP**. After verification you may download the evidence or explicitly confirm replacing the current draft; cancellation leaves the draft untouched. Changing the selected file invalidates the displayed evidence. The local server verifies the original ZIP without extracting or executing its contents.
+
+For command-line use, verify a bundle before extracting or opening it:
 
 ```sh
 python scripts/creator_bundle.py creator-project.zip --report bundle-evidence.json
