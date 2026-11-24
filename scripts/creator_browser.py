@@ -84,7 +84,7 @@ def check_browser(spec, output=None, engine="chromium", publish=False):
                             checks["response"] = bool(result and result.ok)
                             checks["heading"] = (page.locator("h1").count() == 1 and
                                                  page.locator("h1").is_visible() and
-                                                 page.locator("h1").text_content() == item["title"])
+                                                 page.locator("h1").text_content() == item["title"].replace("\r\n", "\n").replace("\r", "\n"))
                             checks["landmark"] = page.locator("main#main").count() == 1
                             checks["navigation"] = (
                                 page.locator("nav a").evaluate_all("(links) => links.map(a => a.getAttribute('href'))") == expected_pages and
@@ -107,7 +107,7 @@ def check_browser(spec, output=None, engine="chromium", publish=False):
                             checks["unique_ids"] = page.evaluate(
                                 "() => { const ids = [...document.querySelectorAll('[id]')].map(n=>n.id); return new Set(ids).size===ids.length; }")
                             checks["labeled_form_controls"] = page.evaluate(
-                                "() => [...document.querySelectorAll('input:not([type=hidden]),select,textarea')].every(n=>!!(n.labels?.length || n.getAttribute('aria-label')?.trim() || n.getAttribute('aria-labelledby')?.split(/\s+/).some(id=>document.getElementById(id)?.textContent.trim())))")
+                                r"() => [...document.querySelectorAll('input:not([type=hidden]),select,textarea')].every(n=>!!(n.labels?.length || n.getAttribute('aria-label')?.trim() || n.getAttribute('aria-labelledby')?.split(/\s+/).some(id=>document.getElementById(id)?.textContent.trim())))")
                             checks["meaningful_document_metadata"] = page.evaluate(
                                 "() => !!(document.documentElement.lang.trim() && document.title.trim() && document.querySelector('meta[name=description]')?.content.trim())")
                             checks["named_buttons_and_links"] = page.evaluate(
@@ -140,6 +140,9 @@ def check_browser(spec, output=None, engine="chromium", publish=False):
                                 text = page.locator("#page-sections").text_content().lower()
                                 while absent in text:
                                     absent += "x"
+                                heading = item["sections"][0]["heading"]
+                                query.fill(heading)
+                                checks["search_positive_result"] = page.locator("#page-sections > *").first.is_visible()
                                 query.fill(absent)
                                 checks["search_empty_result"] = (
                                     page.locator("#page-sections > :not([hidden])").count() == 0 and

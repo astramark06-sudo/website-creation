@@ -85,7 +85,8 @@ def export_fullstack(title, description, model="records", fields=None):
 
 
 def read_schema(path):
-    data = path.read_bytes()
+    with path.open("rb") as stream:
+        data = stream.read(32 * 1024 + 1)
     if len(data) > 32 * 1024:
         raise ValueError("Schema exceeds 32 KiB")
     return validate_fields(json.loads(data.decode("utf-8")), require_nonempty=True)

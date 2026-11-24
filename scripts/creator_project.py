@@ -24,7 +24,7 @@ except ImportError:
 
 MAX_SPEC = 128 * 1024
 SLUG = re.compile(r"[a-z][a-z0-9-]{0,47}\Z")
-RESERVED = {"index", "style", "app", "creator-manifest", "favicon", "search"}
+RESERVED = {"index", "style", "app", "creator-manifest", "favicon", "search", "con", "prn", "aux", "nul"} | {f"{prefix}{number}" for prefix in ("com", "lpt") for number in range(1, 10)}
 FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#09645e"/><path d="M8 9h16v5H8zm0 9h7v5H8zm11 0h5v5h-5z" fill="white"/></svg>\n'
 
 
@@ -39,6 +39,8 @@ def read_spec(path: Path) -> dict:
 def require_text(value, label, limit):
     if not isinstance(value, str) or not value.strip() or len(value) > limit:
         raise ValueError(f"{label} must be nonempty text, at most {limit} characters")
+    if any(ord(c) < 32 and c not in "\t\n\r" or 0xD800 <= ord(c) <= 0xDFFF for c in value):
+        raise ValueError(f"{label} contains unsupported control characters or Unicode")
     return value.strip()
 
 
@@ -57,7 +59,7 @@ def validate_spec(spec, publish=False):
         raise ValueError("Unsupported specification version")
     require_text(spec["title"], "Title", 120)
     require_text(spec["description"], "Description", 1000)
-    if spec["theme"] not in THEMES:
+    if not isinstance(spec["theme"], str) or spec["theme"] not in THEMES:
         raise ValueError("Unknown theme")
     review = spec["review"]
     exact_keys(review, {"content_rights_confirmed", "originality_reviewed", "publish_approved"}, "review")
@@ -83,11 +85,19 @@ def validate_spec(spec, publish=False):
         if not isinstance(sections, list) or not 1 <= len(sections) <= 12:
             raise ValueError("Use 1 to 12 sections on each page")
         for section in sections:
+            if not isinstance(section, dict):
+                raise ValueError("Section must be an object")
+            require_text(section.get("heading"), "Section heading", 120)
+            require_text(section.get("body"), "Section body", 4000)
             validate_component(section)
-            require_text(section["heading"], "Section heading", 120)
-            require_text(section["body"], "Section body", 4000)
     if pages[0]["slug"] != "home":
         raise ValueError("The first page must have slug home")
+    if len(spec_bytes(spec)) > MAX_SPEC:
+        raise ValueError("Project specification exceeds 128 KiB")
+
+
+def spec_bytes(spec):
+    return json.dumps(spec, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
 
 
 def filename(page):
@@ -150,10 +160,8 @@ def assemble(spec):
     return files
 
 
-def build(spec, out, publish=False):
-    validate_spec(spec, publish=publish)
-    files = assemble(spec)
-    manifest = {
+def expected_manifest(spec, files):
+    return {
         "version": 1, "origin": "original-structured-project",
         "publish_approved": all(spec["review"].values()),
         "backend": None, "network_dependencies": [],
@@ -162,6 +170,12 @@ def build(spec, out, publish=False):
                         "No server-side persistence or authentication",
                         "Browser accessibility and performance checks are separate"],
     }
+
+
+def build(spec, out, publish=False):
+    validate_spec(spec, publish=publish)
+    files = assemble(spec)
+    manifest = expected_manifest(spec, files)
     out.mkdir(parents=True, exist_ok=False)
     for name, body in files.items():
         (out / name).write_bytes(body.encode("utf-8"))
@@ -180,11 +194,9 @@ def verify(spec, out, publish=False):
     if {p.name for p in children} != set(expected) | {"creator-manifest.json"}:
         raise ValueError("Unexpected or missing generated files")
     manifest = read_spec(out / "creator-manifest.json")
-    hashes = {name: digest(body.encode("utf-8")) for name, body in sorted(expected.items())}
-    if manifest.get("files") != hashes or manifest.get("origin") != "original-structured-project":
+    # Compare canonical JSON, not Python equality (where True equals 1).
+    if spec_bytes(manifest) != spec_bytes(expected_manifest(spec, expected)):
         raise ValueError("Manifest does not match the project")
-    if manifest.get("publish_approved") is not all(spec["review"].values()):
-        raise ValueError("Manifest approval does not match the project")
     for name, body in expected.items():
         if (out / name).read_bytes() != body.encode("utf-8"):
             raise ValueError("Generated file differs from original build: " + name)

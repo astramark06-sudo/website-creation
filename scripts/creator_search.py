@@ -23,7 +23,11 @@ SEARCH_JS = r"""'use strict';
   const status=document.getElementById('section-search-status');
   const sections=Array.from(document.getElementById('page-sections').children);
   const normalize=s=>s.normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
-  const index=sections.map(section=>normalize(section.textContent));
+  const index=sections.map(section=>{
+    const walker=document.createTreeWalker(section,NodeFilter.SHOW_TEXT),parts=[];
+    while(walker.nextNode())parts.push(walker.currentNode.nodeValue);
+    return normalize(parts.join(" "));
+  });
   function update(){
     const term=normalize(query.value);
     let count=0;

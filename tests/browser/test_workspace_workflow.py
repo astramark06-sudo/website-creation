@@ -27,6 +27,7 @@ class WorkflowBrowserTests(unittest.TestCase):
                     page.goto(url)
                     expect(page.locator("#status")).to_have_text("0 matching records.")
                     expect(page.get_by_label("Workflow", exact=True)).to_be_disabled()
+                    expect(page.get_by_label("Workflow", exact=True)).to_have_value("Draft")
                     page.get_by_label("Title", exact=True).fill("Original document")
                     page.get_by_role("button", name="Add record", exact=True).click()
                     expect(page.locator("#items dd")).to_have_text("Draft")

@@ -188,7 +188,7 @@ async function start(){
         }else status('Visual report created. Existing draft unchanged.');
       }finally{$('visual-file').value='';$('visual-authorized').checked=false;}
     }));
-    $('save').addEventListener('click',()=>{project.review=approvals();download(new Blob([JSON.stringify(project,null,2)],{type:'application/json'}),'project.json');status('Draft JSON saved.');});
+    $('save').addEventListener('click',()=>{project.review=approvals();download(new Blob([JSON.stringify(project)],{type:'application/json'}),'project.json');status('Draft JSON saved.');});
     $('viewport').addEventListener('change',()=>$('frame').style.width=$('viewport').value);
     $('preview').addEventListener('click',()=>run(async()=>{status('Generating preview…');const r=await request('/api/preview',{spec:project,slug:$('preview-page').value});$('frame').srcdoc=(await r.json()).html;status('Preview generated. Test interactions after export.');}));
     $('export').addEventListener('click',()=>run(async()=>{status('Building draft…');const r=await request('/api/export',{spec:project});download(await r.blob(),'creator-project.zip');status('Verified draft exported. Nothing published.');}));

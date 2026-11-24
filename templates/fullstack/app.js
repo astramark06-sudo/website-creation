@@ -28,7 +28,7 @@ function setupFields(){
   for(const field of fields){
     const label=document.createElement('label');label.textContent=field.label;
     const input=document.createElement(['choice','link','stage'].includes(field.type)?'select':'input');
-    input.id='model-'+field.id;
+    input.id='model-'+field.id;label.htmlFor=input.id;input.setAttribute('aria-label',field.label);
     if(field.type==='choice'||field.type==='stage')for(const choice of field.choices){const option=document.createElement('option');option.value=choice;option.textContent=choice;input.append(option);}
     if(field.type==='stage'){input.disabled=true;const stageFilter=$('stage-filter');for(const choice of field.choices){const option=document.createElement('option');option.value=choice;option.textContent=choice;stageFilter.append(option);}$('stage-filter-label').hidden=false;}
     if(field.type==='integer'){input.type='number';input.min='0';input.max='1000000';input.step='1';input.required=true;input.defaultValue='0';}
@@ -112,7 +112,7 @@ async function refresh(){
   }
   status(data.items.length+' matching records.');
 }
-async function run(fn){if(busy)return;busy=true;try{await fn();}catch(e){status(e.message||'Request failed');}finally{busy=false;}}
+async function run(fn){if(busy)return;busy=true;const enabled=[...document.querySelectorAll('button:not(:disabled)')];enabled.forEach(b=>b.disabled=true);try{await fn();}catch(e){status(e.message||'Request failed');}finally{enabled.forEach(b=>b.disabled=false);busy=false;}}
 async function start(){try{
   const session=await api('/api/session');token=session.token;$('title').textContent=session.config.title;$('description').textContent=session.config.description;fields=session.config.fields||[];setupFields();
   $('editor').addEventListener('submit',e=>{e.preventDefault();run(async()=>{const data={action:editId===null?'add':'edit',title:$('name').value,notes:$('notes').value};if(editId!==null)data.id=editId;if(fields.length)data.details=detailsForSave();await api('/api/items',data);clear();await refresh();});});

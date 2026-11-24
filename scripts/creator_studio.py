@@ -12,7 +12,7 @@ import tempfile
 import zipfile
 
 try:
-    from .creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec
+    from .creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec, spec_bytes
     from .creator_reference import reference_plan
     from .creator_ai import generate_draft, valid_model
     from .creator_fullstack import export_fullstack
@@ -21,7 +21,7 @@ try:
     from .creator_browser import check_browser
     from .creator_visual_reference import visual_plan
 except ImportError:
-    from creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec
+    from creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec, spec_bytes
     from creator_reference import reference_plan
     from creator_ai import generate_draft, valid_model
     from creator_fullstack import export_fullstack
@@ -61,7 +61,7 @@ def export_zip(spec):
         with zipfile.ZipFile(result, "w", zipfile.ZIP_DEFLATED) as archive:
             for path in sorted(out.iterdir()):
                 archive.write(path, "site/" + path.name)
-            archive.writestr("project.json", json.dumps(draft, indent=2) + "\n")
+            archive.writestr("project.json", spec_bytes(draft))
         return result.getvalue()
 
 
@@ -130,6 +130,8 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
                 if not 0 < length <= MAX_SPEC:
                     raise ValueError("Invalid request size")
                 payload = json.loads(self.rfile.read(length).decode("utf-8"))
+                if not isinstance(payload, dict):
+                    raise ValueError("Expected JSON object")
                 if self.path == "/api/ai-draft":
                     if not ai_model:
                         self.send_json(403, {"error": "Local AI is not enabled"})

@@ -115,6 +115,8 @@ def list_items(path, query="", state="all", fields=None, stage=None):
     scalar_ids = {f["id"] for f in fields if f["type"] != "link"}
     link_ids = {f["id"] for f in fields if f["type"] == "link"}
     with closing(database(path, fields)) as db:
+        # Read records and relationships from one consistent snapshot.
+        db.execute("BEGIN")
         rows = db.execute(
             "SELECT items.id,title,notes,done,item_details.data FROM items "
             "LEFT JOIN item_details ON item_details.item_id=items.id "
@@ -221,6 +223,8 @@ def change_item(path, payload, fields=None):
                 if row is None:
                     raise ValueError("Item not found")
                 previous = json.loads(row[0])
+                if not isinstance(previous, dict):
+                    raise ValueError("Invalid stored workflow data")
                 current = previous.get(name)
                 if current not in stages:
                     raise ValueError("Invalid stored workflow stage")
@@ -228,7 +232,7 @@ def change_item(path, payload, fields=None):
                     raise ValueError("Use the workflow controls to change stages")
                 if action == "move_stage":
                     target = payload["target"]
-                    if payload["expected"] != current or target not in stages or abs(stages.index(target) - stages.index(current)) != 1:
+                    if not isinstance(target, str) or not isinstance(payload["expected"], str) or payload["expected"] != current or target not in stages or abs(stages.index(target) - stages.index(current)) != 1:
                         raise ValueError("Invalid or stale workflow transition")
                     previous[name] = target
                     db.execute("UPDATE item_details SET data=? WHERE item_id=?",
@@ -267,7 +271,7 @@ def backup_database(source, destination, fields=None):
     # SQLite's backup API copies a consistent snapshot, including committed
     # transactions in the journal. Validate the model before creating output.
     with closing(database(source, fields)) as original:
-        if original.execute("PRAGMA quick_check").fetchall()[0][0] != "ok":
+        if [row[0] for row in original.execute("PRAGMA quick_check")] != ["ok"]:
             raise ValueError("Source database failed integrity check")
         if original.execute("PRAGMA foreign_key_check").fetchone() is not None:
             raise ValueError("Source database has invalid relationships")
