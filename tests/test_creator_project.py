@@ -22,6 +22,9 @@ class CreatorProjectTests(unittest.TestCase):
             self.assertIn('href="workspace.html"', (out / "index.html").read_text())
             self.assertIn('src="app.js"', (out / "workspace.html").read_text())
             self.assertTrue((out / ".nojekyll").exists())
+            self.assertTrue((out / "favicon.svg").exists())
+            self.assertIn('href="favicon.svg"', (out / "index.html").read_text())
+            self.assertIn('id="main" tabindex="-1"', (out / "index.html").read_text())
             self.assertEqual(verify(self.spec, out)["status"], "passed")
 
     def test_publish_requires_review(self):
