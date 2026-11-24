@@ -16,7 +16,7 @@ The Python functions create_database, add_record, edit_record, delete_record and
 
 ## Handoff
 
-Scope: backend-only, independently authored, no visual design source needed. Selected tool: existing Python standard library SQLite; no new license or service requirements. Alternatives such as external database platforms are deferred because the current acceptance criteria are local relational storage. Next stage: graphical schema authoring and project-specific release evidence; schema migrations, multi-user security and deployment are separate work. Current CI status must be checked before treating this feature as verified.
+Scope: backend-only, independently authored, no visual design source needed. Selected tool: existing Python standard library SQLite; no new license or service requirements. Alternatives such as external database platforms are deferred because the current acceptance criteria are local relational storage. Next stage: project-specific release evidence and relational migration planning; schema migrations, multi-user security and deployment are separate work. Current CI status must be checked before treating this feature as verified.
 
 ## Standalone application export
 
@@ -26,4 +26,10 @@ In Studio open Multi-table relational application, load the example schema or ed
 python scripts/creator_relational_export.py --title Inventory --description 'Local inventory' --schema projects/relational-example.json --output relational.zip
 ```
 
-The server initializes a new database only if absent and verifies schema compatibility on restart. Its HTTP interface is local only, with exact host, origin and session-token checks, bounded JSON bodies, strict routes and no external resources. Existing exports remain separate. The JSON editor is not a graphical schema designer. Data is limited to 1,000 records per table; production accounts, relational migrations and hosting are not supported. CI tests the exported application, including actual Studio export, cross-table relations and persistence across server restart. Verify current CI before claiming support.
+The server initializes a new database only if absent and verifies schema compatibility on restart. Its HTTP interface is local only, with exact host, origin and session-token checks, bounded JSON bodies, strict routes and no external resources. Existing exports remain separate. The visual designer and advanced JSON editor share the same validated schema. Data is limited to 1,000 records per table; production accounts, relational migrations and hosting are not supported. CI tests the exported application, including actual Studio export, cross-table relations and persistence across server restart. Verify current CI before claiming support.
+
+## No-code schema design
+
+In the relational Studio panel, start a new schema or load the example. Add tables and fields, edit their labels, select text, integer, choice or relation types, enter choice options one per line, and select the related table. IDs are generated automatically and remain stable while labels change. The designer prevents removing a referenced table until its inbound relationships have been removed or redirected. The limits remain 2–4 tables and 1–8 fields per table. The advanced JSON panel exposes the same schema; editing JSON temporarily hides the visual editor until the local server validates and applies it. A schema download is validated by the same backend and contains no records. Existing database schema compatibility rules still apply. No schema migration or public hosting is performed by this designer.
+
+Design source: original Studio controls and existing design tokens. No third-party UI libraries, paid APIs or new runtime dependencies. Keyboard-operable native form controls and server validation are the acceptance criteria; the browser regression suite exercises all three configured engines. CI must pass before claiming verified support.

@@ -246,7 +246,11 @@ async function start(){
       const r=await request('/api/fullstack-export',payload);download(await r.blob(),'local-data-workspace.zip');
       status('Local database app exported. Run server.py in the extracted folder.');
     }));
-    $('relational-example').addEventListener('click',()=>{$('relational-schema').value=JSON.stringify({"version":1,"tables":[{"id":"categories","label":"Categories","fields":[{"id":"name","label":"Name","type":"text"}]},{"id":"items","label":"Items","fields":[{"id":"name","label":"Name","type":"text"},{"id":"quantity","label":"Quantity","type":"integer"},{"id":"state","label":"State","type":"choice","choices":["Available","Archived"]},{"id":"category","label":"Category","type":"relation","target":"categories"}]}]},null,2);});
+    window.initRelationalDesigner({
+      example:{"version":1,"tables":[{"id":"categories","label":"Categories","fields":[{"id":"name","label":"Name","type":"text"}]},{"id":"items","label":"Items","fields":[{"id":"name","label":"Name","type":"text"},{"id":"quantity","label":"Quantity","type":"integer"},{"id":"state","label":"State","type":"choice","choices":["Available","Archived"]},{"id":"category","label":"Category","type":"relation","target":"categories"}]}]},
+      validate:async schema=>(await (await request('/api/relational-validate',{schema})).json()).schema,
+      download
+    });
     $('relational-export').addEventListener('click',()=>run(async()=>{
       const schema=JSON.parse($('relational-schema').value);
       status('Building relational database app…');

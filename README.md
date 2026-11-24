@@ -40,4 +40,4 @@ Use the [release readiness guide](docs/RELEASE-READINESS.md) for project-specifi
 
 The [screenshot-informed design guide](docs/VISUAL-REFERENCE.md) explains the local visual analysis option and its limitations.
 
-See the [local relational data engine](docs/RELATIONAL-ENGINE.md) for the separate multi-table engine and local application export. The Studio supports editable schema JSON.
+See the [local relational data engine](docs/RELATIONAL-ENGINE.md) for the separate multi-table engine and local application export. The Studio supports a visual table and field designer plus editable schema JSON.

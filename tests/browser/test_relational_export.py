@@ -32,7 +32,7 @@ class RelationalBrowserTests(unittest.TestCase):
                 with serve(lambda port: make_handler(port, "studio-relational-test")) as url:
                     page.goto(url)
                     expect(page.locator("#status")).to_contain_text("Preview generated")
-                    page.locator("#relational-panel summary").click()
+                    page.locator("#relational-panel > summary").click()
                     page.get_by_role("button", name="Load example schema").click()
                     schema = json.loads(page.locator("#relational-schema").input_value())
                     self.assertEqual(len(schema["tables"]), 2)
