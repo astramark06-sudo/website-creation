@@ -1,13 +1,14 @@
 """Project-specific release report and stale report invalidation."""
 import json
 from pathlib import Path
+import tempfile
 import unittest
 from unittest.mock import patch
 
 from browser_engine import launch_browser, browser_engine
 from playwright.sync_api import expect, sync_playwright
 from scripts.creator_studio import make_handler
-from scripts.creator_project import read_spec
+from scripts.creator_project import build, read_spec, verify
 from scripts.creator_release import release_report
 from test_studio import serve
 
@@ -16,7 +17,13 @@ class ReleaseBrowserTests(unittest.TestCase):
     def test_combined_report_with_installed_engine(self):
         root = Path(__file__).resolve().parents[2]
         spec = read_spec(root / "projects" / "example.json")
-        report = release_report(spec, engines=[browser_engine()])
+        spec["review"] = {key: True for key in spec["review"]}
+        with tempfile.TemporaryDirectory() as tmp:
+            output = Path(tmp) / "site"
+            build(spec, output, publish=True)
+            report = release_report(spec, engines=[browser_engine()], output=output)
+            self.assertEqual(verify(spec, output, publish=True)["status"], "passed")
+        self.assertEqual(report["warnings"], [])
         self.assertEqual(report["browser_reports"][0]["status"], "passed")
         self.assertEqual(report["browser_reports"][0]["files"], report["files"])
         self.assertFalse(report["publication_ready"])

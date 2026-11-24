@@ -1,16 +1,17 @@
 """Project-specific release evidence, not a certification or publishing action."""
 import argparse
 from collections import Counter
+from contextlib import nullcontext
 import hashlib
 import json
 from pathlib import Path
 import tempfile
 
 try:
-    from .creator_project import build, read_spec, validate_spec, assemble, filename
+    from .creator_project import build, read_spec, validate_spec, assemble, filename, verify
     from .creator_browser import check_browser, ENGINES, VIEWPORTS
 except ImportError:
-    from creator_project import build, read_spec, validate_spec, assemble, filename
+    from creator_project import build, read_spec, validate_spec, assemble, filename, verify
     from creator_browser import check_browser, ENGINES, VIEWPORTS
 
 PLACEHOLDERS = {
@@ -25,7 +26,7 @@ PLACEHOLDERS = {
 }
 
 
-def release_report(spec, *, engines=()):
+def release_report(spec, *, engines=(), output=None):
     validate_spec(spec)
     if not isinstance(engines, (list, tuple)) or any(engine not in ENGINES for engine in engines) or len(set(engines)) != len(engines):
         raise ValueError("Select distinct supported browser engines")
@@ -34,9 +35,14 @@ def release_report(spec, *, engines=()):
     files = {name: hashlib.sha256(body.encode("utf-8")).hexdigest()
              for name, body in sorted(assemble(spec).items())}
     browser_reports = []
-    with tempfile.TemporaryDirectory() as tmp:
-        output = Path(tmp) / "site"
-        report = build(spec, output)
+    # Existing output is verified read-only; otherwise use a disposable build.
+    with (tempfile.TemporaryDirectory() if output is None else nullcontext(None)) as tmp:
+        if output is None:
+            output = Path(tmp) / "site"
+            report = build(spec, output)
+        else:
+            output = Path(output)
+            report = verify(spec, output)
         for engine in engines:
             evidence = check_browser(spec, output=output, engine=engine)
             if (evidence["project_sha256"] != project_sha256 or evidence["files"] != files
@@ -108,16 +114,28 @@ def main():
     parser.add_argument("--spec", required=True, type=Path)
     parser.add_argument("--engine", action="append", choices=ENGINES, default=[],
                         help="Run a fresh optional local browser check; repeat for distinct engines")
+    parser.add_argument("--output", type=Path, help="Verify an existing generated output directory without changing it")
+    parser.add_argument("--require-reviewed", action="store_true",
+                        help="Require reviewed input, at least one browser engine and no known starter-content warnings")
     parser.add_argument("--report", type=Path, help="Write new JSON evidence file (never overwrite)")
     args = parser.parse_args()
     try:
-        report = release_report(read_spec(args.spec), engines=args.engine)
+        if args.output is not None and args.report is not None:
+            if args.report.resolve().is_relative_to(args.output.resolve()):
+                raise ValueError("Keep release evidence outside the verified site directory")
+        spec = read_spec(args.spec)
+        if args.require_reviewed:
+            validate_spec(spec, publish=True)
+            if not args.engine:
+                raise ValueError("Reviewed release gate requires at least one browser engine")
+        report = release_report(spec, engines=args.engine, output=args.output)
         data = json.dumps(report, indent=2) + "\n"
         if args.report:
             with args.report.open("x", encoding="utf-8") as stream:
                 stream.write(data)
         print(data, end="")
-        if any(item["status"] != "passed" for item in report["browser_reports"]):
+        if (any(item["status"] != "passed" for item in report["browser_reports"])
+                or (args.require_reviewed and report["warnings"])):
             raise SystemExit(1)
     except (ValueError, TypeError, KeyError, OSError) as exc:
         parser.error(str(exc))
