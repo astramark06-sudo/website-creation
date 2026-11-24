@@ -77,6 +77,7 @@ def export_fullstack(title, description, model="records", fields=None):
             "README.md",
             "# Local workspace\n\nRun python server.py, then open the printed loopback address. "
             "Python 3.10+ only. Data is saved in workspace.sqlite3. Stop the server, then run python server.py --backup snapshot.sqlite3. "
+            "To append fields, stop the server and use --migrate-to NEW_EXPORT --defaults defaults.json with explicit defaults. "
             "Keep backups private. Local single-user prototype only: no public hosting, user "
             "accounts, or internet exposure. Keep config.json with its matching database.\n",
         )
