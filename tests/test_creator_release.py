@@ -81,6 +81,20 @@ class ReleaseTests(unittest.TestCase):
                 release_report(self.spec, output=output)
             self.assertEqual((output / "index.html").read_text(), "changed")
 
+    def test_evidence_cannot_be_written_into_verified_output(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            output, spec_file = Path(tmp) / "site", Path(tmp) / "spec.json"
+            build(self.spec, output)
+            spec_file.write_text(json.dumps(self.spec), encoding="utf-8")
+            evidence = output / "report.json"
+            args = ["release", "--spec", str(spec_file), "--output", str(output), "--report", str(evidence)]
+            with patch("sys.argv", args), redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as exc:
+                    main()
+                self.assertEqual(exc.exception.code, 2)
+            self.assertFalse(evidence.exists())
+            self.assertEqual(verify(self.spec, output)["status"], "passed")
+
     def test_reviewed_gate_rejects_unapproved_input_and_missing_engines(self):
         with tempfile.TemporaryDirectory() as tmp:
             spec_file = Path(tmp) / "spec.json"
