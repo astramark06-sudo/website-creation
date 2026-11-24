@@ -1,0 +1,138 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "id": "marketing",
+      "framework": "astro",
+      "required": [
+        "astro",
+        "github-ci"
+      ],
+      "optional": [
+        "shadcn",
+        "motion",
+        "svgo",
+        "sharp",
+        "lighthouse-ci",
+        "pa11y-ci"
+      ],
+      "sources": [
+        "hyperui",
+        "merakiui",
+        "heroicons",
+        "21st-marketplace"
+      ]
+    },
+    {
+      "id": "interactive",
+      "framework": "vite",
+      "required": [
+        "vite",
+        "shadcn",
+        "github-ci",
+        "vitest",
+        "playwright"
+      ],
+      "optional": [
+        "tanstack-query",
+        "tanstack-table",
+        "zod",
+        "react-hook-form",
+        "motion",
+        "msw",
+        "axe-core"
+      ],
+      "sources": [
+        "shadcn-directory",
+        "21st-marketplace",
+        "ark-ui",
+        "heroicons",
+        "magic-ui"
+      ]
+    },
+    {
+      "id": "documentation",
+      "framework": "astro",
+      "required": [
+        "astro",
+        "starlight",
+        "github-ci"
+      ],
+      "optional": [
+        "lighthouse-ci",
+        "pa11y-ci",
+        "cspell"
+      ],
+      "sources": [
+        "pagefind",
+        "heroicons",
+        "i18next"
+      ]
+    },
+    {
+      "id": "pwa",
+      "framework": "vite",
+      "required": [
+        "vite",
+        "github-ci",
+        "playwright"
+      ],
+      "optional": [
+        "shadcn",
+        "vitest",
+        "axe-core"
+      ],
+      "sources": [
+        "vite-pwa",
+        "shadcn-directory",
+        "web-vitals"
+      ]
+    },
+    {
+      "id": "immersive",
+      "framework": "vite",
+      "required": [
+        "vite",
+        "github-ci"
+      ],
+      "optional": [
+        "threejs",
+        "react-three-fiber",
+        "drei",
+        "gsap",
+        "playwright"
+      ],
+      "sources": [
+        "react-bits",
+        "motion-primitives",
+        "magic-ui"
+      ]
+    },
+    {
+      "id": "data-app",
+      "framework": "vite",
+      "required": [
+        "vite",
+        "shadcn",
+        "github-ci",
+        "vitest",
+        "playwright"
+      ],
+      "optional": [
+        "tanstack-table",
+        "tanstack-query",
+        "zod",
+        "react-hook-form",
+        "supabase",
+        "appwrite",
+        "msw",
+        "recharts"
+      ],
+      "sources": [
+        "shadcn-directory",
+        "21st-marketplace",
+        "heroicons"
+      ]
+    }
+  ]
+}

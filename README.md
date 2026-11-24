@@ -29,3 +29,7 @@ Coding agents must read [AGENTS.md](AGENTS.md) before making changes and read [.
 ## Project state
 
 The repository is still a tooling starter. No frontend framework, application scaffold, package manifest or website content has been selected. App-specific CI checks and deployment remain conditional until the corresponding source/configuration exists.
+
+## Master website creator
+
+Use the [offline creator planner and source catalogue](docs/MASTER-CREATOR.md) to select a zero-spend development profile and discover permitted public resources. The catalogue contains references, not copied third-party components, and the planner makes no network calls or installations.
