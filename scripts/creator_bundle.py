@@ -36,8 +36,8 @@ def parse_json(data):
                       parse_constant=reject_constant)
 
 
-def verify_bundle(data):
-    """Return evidence of matching current generator output, not authenticity."""
+def read_verified_bundle(data):
+    """Return a validated draft and evidence; never extract or execute the ZIP."""
     if not isinstance(data, bytes) or not 0 < len(data) <= MAX_ARCHIVE:
         raise ValueError("Select a static project ZIP up to 4 MiB")
     try:
@@ -77,7 +77,7 @@ def verify_bundle(data):
     except (zipfile.BadZipFile, RuntimeError, NotImplementedError, EOFError, zlib.error,
             UnicodeError, TypeError, KeyError, RecursionError) as exc:
         raise ValueError("Invalid or unsupported static project bundle") from exc
-    return {
+    report = {
         "version": 1,
         "status": "passed",
         "archive_sha256": hashlib.sha256(data).hexdigest(),
@@ -92,6 +92,13 @@ def verify_bundle(data):
             "No browser execution, extraction, originality certification or publication approval.",
         ],
     }
+
+    return spec, report
+
+
+def verify_bundle(data):
+    """Return evidence of matching current generator output, not authenticity."""
+    return read_verified_bundle(data)[1]
 
 
 def main():
