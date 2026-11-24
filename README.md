@@ -36,7 +36,7 @@ Use the [offline creator planner and source catalogue](docs/MASTER-CREATOR.md) t
 
 See the [local full-stack workspace starter](docs/FULLSTACK-STARTER.md) for SQLite-backed application export. It is local-only, not a public server deployment. See the [UTCP integration](docs/UTCP-INTEGRATION.md) for opt-in read-only tool discovery.
 
-Use the [release readiness guide](docs/RELEASE-READINESS.md) for project-specific build and optional browser reports before publishing. Use the [static bundle verifier](docs/STATIC-BUNDLE-VERIFICATION.md) to check a downloaded Studio ZIP without extracting it. See the [original component library](docs/ORIGINAL-COMPONENTS.md) for supported section types.
+Use the [release readiness guide](docs/RELEASE-READINESS.md) for project-specific build and optional browser reports before publishing, including a manual GitHub Actions draft preflight with a downloadable verified ZIP and no deployment. Use the [static bundle verifier](docs/STATIC-BUNDLE-VERIFICATION.md) to check a downloaded Studio ZIP without extracting it. See the [original component library](docs/ORIGINAL-COMPONENTS.md) for supported section types.
 
 The [screenshot-informed design guide](docs/VISUAL-REFERENCE.md) explains the local visual analysis option and its limitations.
 
