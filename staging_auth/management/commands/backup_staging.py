@@ -25,7 +25,8 @@ class Command(BaseCommand):
             raise CommandError("Recovery copy requires both --recovery-copy and --destination")
         if source is not None:
             active = Path(settings.DATABASES["default"]["NAME"]).resolve()
-            if source.resolve() == active or destination.resolve() == active:
+            if (source.resolve() == active or destination.resolve() == active
+                    or (source.is_file() and active.is_file() and source.samefile(active))):
                 raise CommandError("Recovery must not use the configured active database")
             try:
                 report = recovery_copy(source, destination)
