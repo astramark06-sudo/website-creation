@@ -136,3 +136,55 @@ class AuthenticatedStagingTests(TestCase):
         with self.assertRaises(CommandError):
             call_command("provision_workspace", **args)
         self.assertEqual(Workspace.objects.filter(slug="new_workspace").count(), 1)
+
+
+    def test_html_editor_scoped_form_and_role_permissions(self):
+        self.client.force_login(self.editor)
+        self.assertContains(self.client.get("/workspaces/alpha/"), "Your role: editor")
+        path = "/workspaces/alpha/tables/items/"
+        response = self.client.get(path)
+        self.assertContains(response, "Alpha category")
+        self.assertNotContains(response, "Beta category")
+        self.assertContains(response, "Add record")
+        values = {"f_name": "<sample>", "f_quantity": "2", "f_state": "Available", "f_category": str(self.cat_a.pk)}
+        self.assertEqual(self.client.post(path, values).status_code, 302)
+        record = Record.objects.filter(workspace=self.a, table_id="items").order_by("-id").first()
+        self.assertEqual(record.data["name"], "<sample>")
+        self.assertContains(self.client.get(path), "&lt;sample&gt;")
+        edit = path + str(record.pk) + "/edit/"
+        self.assertContains(self.client.get(edit), "Save record")
+        self.assertEqual(self.client.post(edit, {**values, "f_quantity": "9"}).status_code, 302)
+        record.refresh_from_db()
+        self.assertEqual(record.data["quantity"], 9)
+        self.assertEqual(self.client.post(edit, {**values, "f_category": str(self.cat_b.pk)}).status_code, 200)
+        record.refresh_from_db()
+        self.assertEqual(record.data["category"], self.cat_a.pk)
+        self.assertEqual(self.client.post(path, {**values, "role": "owner"}).status_code, 400)
+        self.assertEqual(self.client.get(path + str(record.pk) + "/delete/").status_code, 403)
+        self.client.force_login(self.viewer)
+        self.assertNotContains(self.client.get(path), "Add record")
+        self.assertNotContains(self.client.get(path), "Edit record")
+        self.assertEqual(self.client.get(edit).status_code, 403)
+        self.assertEqual(self.client.post(path, values).status_code, 403)
+
+    def test_html_delete_and_membership_form(self):
+        self.client.force_login(self.owner)
+        delete = "/workspaces/alpha/tables/categories/" + str(self.cat_a.pk) + "/delete/"
+        self.assertContains(self.client.get(delete), "Confirm deletion")
+        self.assertTrue(Record.objects.filter(pk=self.cat_a.pk).exists())
+        self.assertEqual(self.client.post(delete, {}).status_code, 302)
+        self.item.refresh_from_db()
+        self.assertIsNone(self.item.data["category"])
+        members = "/workspaces/alpha/members/"
+        self.assertContains(self.client.get(members), "Add or update membership")
+        self.assertContains(self.client.post(members, {"user_id": self.owner.pk, "role": "viewer", "active": "on"}), "retain an active owner")
+        self.assertEqual(self.client.post(members, {"user_id": self.editor.pk, "role": "viewer", "active": "on"}).status_code, 302)
+        self.assertEqual(Membership.objects.get(workspace=self.a, user=self.editor).role, "viewer")
+
+    def test_local_only_request_boundary(self):
+        self.assertEqual(self.client.get("/", REMOTE_ADDR="192.0.2.1").status_code, 403)
+        self.assertEqual(self.client.get("/", HTTP_HOST="example.invalid").status_code, 400)
+        response = self.client.get("/assets/staging.css")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("text/css", response.headers["Content-Type"])
+        self.assertEqual(response.headers["Cache-Control"], "no-store")

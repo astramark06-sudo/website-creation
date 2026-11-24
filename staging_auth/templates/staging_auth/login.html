@@ -1,5 +1,4 @@
-<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Local staging sign-in</title></head>
-<body><main><h1>Local staging sign-in</h1><p>Use a test account provisioned for this local workspace. Do not use personal or production credentials.</p>
-<form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Sign in</button></form>
-</main></body></html>
+{% extends "staging_auth/base.html" %}
+{% block title %}Local staging sign-in{% endblock %}
+{% block content %}<section><h1>Local staging sign-in</h1><p>Use a test account provisioned for this local workspace. Do not use personal or production credentials.</p>
+<form method="post">{% csrf_token %}{{ form.as_p }}{% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}<button type="submit">Sign in</button></form></section>{% endblock %}

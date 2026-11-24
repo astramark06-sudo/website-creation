@@ -1,0 +1,4 @@
+{% extends "staging_auth/base.html" %}
+{% block title %}{{ workspace.title }}{% endblock %}
+{% block content %}<section><h1>{{ workspace.title }}</h1><p>Your role: {{ role }}</p><h2>Tables</h2><ul>{% for table in tables %}<li><a href="{% url 'collection' workspace.slug table.id %}">{{ table.label }}</a></li>{% endfor %}</ul>
+<div class="actions">{% if can_manage %}<a href="{% url 'members' workspace.slug %}">Manage members</a>{% endif %}{% if can_export %}<a href="/api/workspaces/{{ workspace.slug }}/export/">Download records JSON</a>{% endif %}</div></section>{% endblock %}

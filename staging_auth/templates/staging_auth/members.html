@@ -1,0 +1,4 @@
+{% extends "staging_auth/base.html" %}
+{% block title %}Workspace members{% endblock %}
+{% block content %}<section><p><a href="{% url 'workspace' workspace.slug %}">{{ workspace.title }}</a></p><h1>Workspace members</h1><ul>{% for member in members %}<li>Account #{{ member.user_id }} — {{ member.role }} — {% if member.active %}Active{% else %}Inactive{% endif %}</li>{% endfor %}</ul>
+<h2>Add or update membership</h2><p>Enter an existing local test-account ID. Accounts are provisioned separately by the operator.</p><form method="post">{% csrf_token %}{{ form.as_p }}<button type="submit">Save membership</button></form></section>{% endblock %}

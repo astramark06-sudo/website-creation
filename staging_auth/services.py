@@ -20,7 +20,7 @@ def require_transaction():
         raise RuntimeError("Staging operations require an atomic SQLite transaction")
 
 
-def authorized_workspace(user, slug, action):
+def resolve_membership(user, slug):
     require_transaction()
     if not user.is_authenticated or not get_user_model().objects.filter(pk=user.pk, is_active=True).exists():
         raise NotAuthenticated()
@@ -34,7 +34,12 @@ def authorized_workspace(user, slug, action):
     except ValueError:
         raise NotMember() from None
     workspace = member.workspace
-    require_access(Principal(str(user.pk), workspace.slug, role, True), slug, action)
+    return workspace, Principal(str(user.pk), workspace.slug, role, True)
+
+
+def authorized_workspace(user, slug, action):
+    workspace, principal = resolve_membership(user, slug)
+    require_access(principal, slug, action)
     return workspace
 
 
@@ -100,7 +105,10 @@ def change_record(workspace, table, payload):
                       if field["type"] == "relation" and field["target"] == table]
         if not references:
             continue
-        for related in scoped(workspace, other["id"]):
+        related_rows = list(scoped(workspace, other["id"])[:LIMIT+1])
+        if len(related_rows) > LIMIT:
+            raise ValueError("Record limit exceeded")
+        for related in related_rows:
             updated = False
             checked_values(workspace, other, related.data)
             for field in references:

@@ -1,0 +1,5 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>{% block title %}Local staging{% endblock %}</title><link rel="stylesheet" href="{% url 'staging-style' %}"></head>
+<body><main><header><p>LOCAL AUTHENTICATED STAGING</p><nav aria-label="Workspace navigation"><div class="actions"><a href="{% url 'home' %}">Workspaces</a>{% if user.is_authenticated %}<form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Sign out</button></form>{% endif %}</div></nav></header>
+{% block content %}{% endblock %}
+<p>Local development only. Use synthetic test data; do not expose this server publicly.</p></main></body></html>
