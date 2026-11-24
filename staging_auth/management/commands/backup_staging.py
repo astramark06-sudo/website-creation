@@ -6,16 +6,26 @@ import sqlite3
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
-from staging_auth.backup import backup_staging
+from staging_auth.backup import backup_staging, check_backup
 
 
 class Command(BaseCommand):
-    help = "Back up a stopped local staging database to a new private SQLite file"
+    help = "Create a private backup or check an existing offline snapshot without restoring it"
 
     def add_arguments(self, parser):
-        parser.add_argument("--output", type=Path, required=True)
+        mode = parser.add_mutually_exclusive_group(required=True)
+        mode.add_argument("--output", type=Path)
+        mode.add_argument("--verify", type=Path)
 
     def handle(self, *args, **options):
+        if options["verify"] is not None:
+            try:
+                report = check_backup(options["verify"])
+            except (ValueError, OSError, sqlite3.Error) as exc:
+                raise CommandError("Snapshot verification failed; review the offline backup") from exc
+            self.stdout.write(json.dumps(report, sort_keys=True))
+            self.stdout.write("Offline snapshot checks passed. No database restored or changed.")
+            return
         db = settings.DATABASES["default"]
         if db["ENGINE"] != "django.db.backends.sqlite3":
             raise CommandError("Only the local SQLite staging database is supported")
