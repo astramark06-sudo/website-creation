@@ -13,7 +13,8 @@ from pathlib import Path
 
 MAX_HTML_BYTES = 2 * 1024 * 1024
 MODES = ("landing", "portfolio", "documentation", "task-dashboard")
-THEMES = {"blue": "#164a9b", "teal": "#09645e", "plum": "#643a85"}
+THEMES = {"blue": "#164a9b", "teal": "#09645e", "plum": "#643a85",
+          "forest": "#285c39", "terracotta": "#93431d", "slate": "#3f4e68"}
 
 
 class StructureParser(HTMLParser):

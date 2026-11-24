@@ -2,6 +2,7 @@
 const $ = id => document.getElementById(id);
 let project, token, busy = false;
 const status = text => { $('status').textContent = text; };
+const defaultDesign = () => ({layout:'grid',typeface:'system',density:'comfortable',surface:'rounded'});
 const approvals = () => ({content_rights_confirmed:false, originality_reviewed:false, publish_approved:false});
 const blank = slug => ({slug,title:slug==='home'?'Home':'New page',intro:'Write an original introduction.',sections:[{heading:'Section',body:'Add original content.'}],interaction:'none'});
 const fresh = () => ({version:1,title:'My website',description:'Describe your website.',theme:'teal',pages:[blank('home')],review:approvals()});
@@ -23,6 +24,7 @@ function updatePages(){
 }
 function render(){
   for(const k of ['title','description','theme'])$(k).value=project[k];
+  for(const k of Object.keys(defaultDesign()))$(k).value=(project.design||defaultDesign())[k];
   $('pages').replaceChildren();
   project.pages.forEach((p,i)=>{
     const card=document.createElement('article');card.className='page-card';
@@ -35,6 +37,8 @@ function render(){
       const block=document.createElement('div');block.className='section-card';
       field(block,'Section heading',s.heading,v=>s.heading=v,{max:120});
       field(block,'Section body',s.body,v=>s.body=v,{multiline:true,max:4000});
+      if(j>0)action(block,'Move section up',()=>{[p.sections[j-1],p.sections[j]]=[p.sections[j],p.sections[j-1]];dirty();render();});
+      if(j<p.sections.length-1)action(block,'Move section down',()=>{[p.sections[j+1],p.sections[j]]=[p.sections[j],p.sections[j+1]];dirty();render();});
       if(p.sections.length>1)action(block,'Remove section',()=>{p.sections.splice(j,1);dirty();render();});
       card.append(block);
     });
@@ -71,6 +75,7 @@ async function start(){
       else status('Existing project unchanged.');
     }));
     for(const k of ['title','description','theme'])$(k).addEventListener('input',()=>{project[k]=$(k).value;dirty();});
+    for(const k of Object.keys(defaultDesign()))$(k).addEventListener('input',()=>{project.design={...(project.design||defaultDesign()),[k]:$(k).value};dirty();});
     $('new').addEventListener('click',()=>{if(confirm('Replace the current draft?')){project=fresh();dirty();render();$('frame').srcdoc='';}});
     $('add-page').addEventListener('click',()=>{if(project.pages.length>=20){status('Maximum 20 pages.');return;}let n=2;while(project.pages.some(p=>p.slug==='page-'+n))n++;project.pages.push(blank('page-'+n));dirty();render();});
     $('import').addEventListener('change',async()=>{try{
