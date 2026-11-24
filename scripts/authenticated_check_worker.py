@@ -23,6 +23,10 @@ WIDTHS = (360, 768, 1440)
 stage = "database initialization"
 
 
+class AuditFailure(Exception):
+    """Only fixed, non-sensitive messages are emitted from explicit checks."""
+
+
 class QuietHandler(WSGIRequestHandler):
     def log_message(self, *args):
         pass
@@ -81,10 +85,10 @@ def check(engine):
         for table in tables:
             rows = list(Record.objects.filter(workspace=workspace, table_id=table["id"]).order_by("id").values("id", "data"))
             if rows != expected.get(table["id"], []):
-                raise AssertionError("Stored record mismatch")
+                raise AuditFailure("Stored record mismatch")
         other_record.refresh_from_db()
         if other_record.data != sample(tables[0]):
-            raise AssertionError("Separate workspace changed")
+            raise AuditFailure("Separate workspace changed")
 
     with sync_playwright() as pw, local_server() as url:
         browser = getattr(pw, engine).launch()
@@ -106,6 +110,8 @@ def check(engine):
                 return ctx
 
             def sign_in(role):
+                global stage
+                stage = "sign-in: " + role
                 ctx = context()
                 page = ctx.new_page()
                 page.set_default_timeout(5000)
@@ -114,11 +120,14 @@ def check(engine):
                 page.goto(url + "/login/")
                 page.locator("#id_username").fill(users[role].username)
                 page.locator("#id_password").fill(passwords[role])
-                page.get_by_role("button", name="Sign in", exact=True).click()
+                with page.expect_response(lambda response: response.request.method == "POST" and urlsplit(response.url).path == "/login/") as submitted:
+                    page.get_by_role("button", name="Sign in", exact=True).click()
+                if submitted.value.status != 302:
+                    raise AuditFailure("Sign-in form did not redirect")
                 expect(page.get_by_role("heading", name="Your workspaces")).to_be_visible()
                 cookies = [cookie for cookie in ctx.cookies() if cookie["name"] == "creator_staging_session"]
                 if len(cookies) != 1 or not cookies[0]["httpOnly"] or cookies[0]["sameSite"] != "Strict":
-                    raise AssertionError("Session cookie boundary")
+                    raise AuditFailure("Session cookie boundary")
                 return ctx, page
 
             def collection(table):
@@ -132,7 +141,7 @@ def check(engine):
                     control = page.locator("#id_f_" + field["id"])
                     expect(control).to_be_visible()
                     if not control.evaluate("(el) => el.labels && el.labels.length > 0"):
-                        raise AssertionError("Unlabelled editor control")
+                        raise AuditFailure("Unlabelled editor control")
                     value = values[field["id"]]
                     if field["type"] in ("choice", "relation"):
                         control.select_option(value="" if value is None else str(value))
@@ -145,21 +154,26 @@ def check(engine):
             page.goto(collection(tables[0]))
             expect(page.get_by_role("heading", name="Local staging sign-in")).to_be_visible()
             if page.request.get(api(tables[0])).status != 401:
-                raise AssertionError("Anonymous API access")
+                raise AuditFailure("Anonymous API access")
             anonymous.close()
 
             stage = "editor login and create"
             editor_context, editor = sign_in("editor")
             for table in tables:
+                stage = "editor create"
                 name = table["id"]
                 editor.goto(collection(table))
                 values = sample(table)
                 fill(editor, table, values)
-                editor.get_by_role("button", name="Add record", exact=True).click()
+                with editor.expect_response(lambda response: response.request.method == "POST" and response.url == collection(table)) as submitted:
+                    editor.get_by_role("button", name="Add record", exact=True).click()
+                if submitted.value.status != 302:
+                    raise AuditFailure("Create form did not redirect")
                 expect(editor.locator(".record-grid article")).to_have_count(1)
                 row = Record.objects.get(workspace=workspace, table_id=name)
                 ids[name] = row.pk
                 expected[name] = [{"id": row.pk, "data": values}]
+            stage = "verify created records"
             verify_database()
 
             stage = "editor edit and relation options"
@@ -169,7 +183,10 @@ def check(engine):
                 editor.get_by_role("link", name="Edit record #" + str(ids[name]), exact=True).click()
                 values = sample(table, ids)
                 fill(editor, table, values)
-                editor.get_by_role("button", name="Save record", exact=True).click()
+                with editor.expect_response(lambda response: response.request.method == "POST") as submitted:
+                    editor.get_by_role("button", name="Save record", exact=True).click()
+                if submitted.value.status != 302:
+                    raise AuditFailure("Edit form did not redirect")
                 expect(editor.locator(".record-grid article")).to_have_count(1)
                 expected[name][0]["data"] = values
                 verify_database()
@@ -177,7 +194,7 @@ def check(engine):
                 for width in WIDTHS:
                     editor.set_viewport_size({"width": width, "height": 900})
                     if not editor.evaluate("() => document.documentElement.scrollWidth <= innerWidth + 1"):
-                        raise AssertionError("Horizontal overflow")
+                        raise AuditFailure("Horizontal overflow")
                 results.append({"table": name, "fields": len(table["fields"]), "viewports": list(WIDTHS)})
 
             stage = "viewer and workspace isolation"
@@ -187,25 +204,25 @@ def check(engine):
             expect(viewer.get_by_role("button", name="Add record", exact=True)).to_have_count(0)
             expect(viewer.get_by_role("link", name="Edit record #" + str(ids[tables[0]["id"]]), exact=True)).to_have_count(0)
             if viewer.request.get(url + "/api/workspaces/separate/schema/").status != 404:
-                raise AssertionError("Cross-workspace access")
+                raise AuditFailure("Cross-workspace access")
             csrf = viewer.locator('input[name="csrfmiddlewaretoken"]').first.input_value()
             denied = viewer.request.post(api(tables[0]), headers={"X-CSRFToken": csrf},
                                          data={"action": "add", "values": sample(tables[0])})
             if denied.status != 403 or denied.json().get("error") != "Operation not permitted":
-                raise AssertionError("Viewer mutation not denied")
+                raise AuditFailure("Viewer mutation not denied")
             outsider_context, outsider = sign_in("outsider")
             if outsider.request.get(api(tables[0])).status != 404:
-                raise AssertionError("Nonmember workspace access")
+                raise AuditFailure("Nonmember workspace access")
             outsider_context.close()
 
             stage = "owner administration and CSRF"
             owner_context, owner = sign_in("owner")
             owner.goto(collection(tables[0]))
             if owner.request.post(api(tables[0]), data={"action": "delete", "id": ids[tables[0]["id"]]}).status != 403:
-                raise AssertionError("Missing CSRF token accepted")
+                raise AuditFailure("Missing CSRF token accepted")
             exported = owner.request.get(url + "/api/workspaces/workspace/export/")
             if exported.status != 200 or set(exported.json()["tables"]) != set(ids):
-                raise AssertionError("Owner export failed")
+                raise AuditFailure("Owner export failed")
             owner.goto(url + "/workspaces/workspace/members/")
             owner.locator("#id_user_id").fill(str(users["editor"].pk))
             owner.locator("#id_role").select_option("editor")
@@ -213,7 +230,7 @@ def check(engine):
             owner.get_by_role("button", name="Save membership", exact=True).click()
             expect(owner.get_by_text("Your role: owner", exact=True)).to_be_visible()
             if editor.request.get(api(tables[0])).status != 404:
-                raise AssertionError("Revoked membership still permitted")
+                raise AuditFailure("Revoked membership still permitted")
             editor_context.close()
             viewer_context.close()
 
@@ -236,9 +253,9 @@ def check(engine):
             owner.get_by_role("button", name="Sign out", exact=True).click()
             expect(owner.get_by_role("heading", name="Local staging sign-in")).to_be_visible()
             if owner.request.get(api(tables[0])).status != 401:
-                raise AssertionError("Logout did not revoke session")
+                raise AuditFailure("Logout did not revoke session")
             if unexpected or page_errors:
-                raise AssertionError("Unexpected browser activity")
+                raise AuditFailure("Unexpected browser activity")
             owner_context.close()
             return {"status": "passed", "browser_version": browser.version, "tables": results,
                     "checks": {"anonymous_denial": True, "session_cookie": True, "editor_create_edit": True,
@@ -258,5 +275,5 @@ if __name__ == "__main__":
     except Exception as exc:
         # A bounded stage name and exception class are sufficient to locate the
         # failing check without exposing a synthetic password or request body.
-        print(json.dumps({"status": "failed", "diagnostic": stage + ": " + type(exc).__name__}))
+        print(json.dumps({"status": "failed", "diagnostic": stage + ": " + (str(exc) if type(exc) is AuditFailure else type(exc).__name__)}))
         raise SystemExit(1)
