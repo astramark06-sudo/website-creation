@@ -22,7 +22,8 @@ except ImportError:
 
 MAX_SPEC = 128 * 1024
 SLUG = re.compile(r"[a-z][a-z0-9-]{0,47}\Z")
-RESERVED = {"index", "style", "app", "creator-manifest"}
+RESERVED = {"index", "style", "app", "creator-manifest", "favicon"}
+FAVICON = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><rect width="32" height="32" rx="7" fill="#09645e"/><path d="M8 9h16v5H8zm0 9h7v5H8zm11 0h5v5h-5z" fill="white"/></svg>\n'
 
 
 def read_spec(path: Path) -> dict:
@@ -116,10 +117,11 @@ def render_page(spec, page):
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="description" content="{e(spec["description"])}">
 <title>{e(page["title"])} | {e(spec["title"])}</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="stylesheet" href="style.css">{script}</head>
 <body><a class="skip" href="#main">Skip to content</a>
 <header><div class="wrap nav"><strong>{e(spec["title"])}</strong><nav aria-label="Main navigation">{nav}</nav></div></header>
-<main class="wrap" id="main"><section class="hero"><h1>{e(page["title"])}</h1><p>{e(page["intro"])}</p></section>
+<main class="wrap" id="main" tabindex="-1"><section class="hero"><h1>{e(page["title"])}</h1><p>{e(page["intro"])}</p></section>
 <section aria-label="Page sections" class="grid">{cards}</section>
 {TASKS if tasks else ""}</main>
 <footer><div class="wrap">{e(spec["title"])}</div></footer></body></html>
@@ -136,6 +138,7 @@ def assemble(spec):
     files["style.css"] = CSS.replace("ACCENT", THEMES[spec["theme"]]) + design_css(spec) + component_css(spec)
     if any(p["interaction"] == "tasks" for p in spec["pages"]):
         files["app.js"] = JS
+    files["favicon.svg"] = FAVICON
     files[".nojekyll"] = ""
     return files
 

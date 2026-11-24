@@ -30,3 +30,33 @@ jobs:
         run: python -m unittest discover -s tests/browser -v
       - name: Verify project-specific browser audit
         run: python scripts/creator_browser.py --spec projects/example.json --report browser-report.json
+
+  cross-browser:
+    name: Generated website smoke tests (${{ matrix.engine }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        engine: [firefox, webkit]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with:
+          python-version: "3.12"
+      - name: Install pinned browser test tool
+        run: python -m pip install "playwright==1.51.0"
+      - name: Install selected browser
+        env:
+          ENGINE: ${{ matrix.engine }}
+        run: python -m playwright install --with-deps "$ENGINE"
+      - name: Verify generated project
+        env:
+          ENGINE: ${{ matrix.engine }}
+        run: python scripts/creator_browser.py --spec projects/example.json --engine "$ENGINE" --report browser-report.json
+      - name: Verify component and design coverage
+        env:
+          ENGINE: ${{ matrix.engine }}
+        run: python -m unittest discover -s tests/cross_browser -v

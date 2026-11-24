@@ -19,7 +19,7 @@ except ImportError:
 ORIGIN = "https://creator.invalid"
 VIEWPORTS = (360, 768, 1440)
 MIMES = {".html": "text/html; charset=utf-8", ".css": "text/css; charset=utf-8",
-         ".js": "text/javascript; charset=utf-8"}
+         ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml"}
 ENGINES = ("chromium", "firefox", "webkit")
 
 
@@ -65,15 +65,15 @@ def check_browser(spec, output=None, engine="chromium", publish=False):
                     else:
                         body, mime = target
                         route.fulfill(status=200, body=body, content_type=mime, headers={
-                            "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; img-src 'none'; frame-src 'none'",
+                            "Content-Security-Policy": "default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'none'; base-uri 'none'; form-action 'none'; img-src 'self'; frame-src 'none'",
                             "X-Content-Type-Options": "nosniff",
                         })
                 context.route("**/*", route_request)
                 try:
                     page = context.new_page()
                     page.set_default_timeout(4000)
-                    page.on("pageerror", lambda error: errors.append("Uncaught JavaScript error."))
-                    page.on("console", lambda message: errors.append("Browser console error.") if message.type == "error" else None)
+                    page.on("pageerror", lambda error: errors.append(("JavaScript: " + str(error))[:400]) if len(errors) < 20 else None)
+                    page.on("console", lambda message: errors.append(("Console: " + message.text)[:400]) if message.type == "error" and len(errors) < 20 else None)
                     for item in spec["pages"]:
                         name = filename(item)
                         blocked.clear()
@@ -98,6 +98,20 @@ def check_browser(spec, output=None, engine="chromium", publish=False):
                             page.keyboard.press("Tab")
                             checks["keyboard_skip_link"] = page.evaluate(
                                 "() => document.activeElement?.classList.contains('skip') === true")
+                            if checks["keyboard_skip_link"]:
+                                page.keyboard.press("Enter")
+                                checks["skip_target_focus"] = page.evaluate(
+                                    "() => document.activeElement?.id === 'main'")
+                            else:
+                                checks["skip_target_focus"] = False
+                            checks["unique_ids"] = page.evaluate(
+                                "() => { const ids = [...document.querySelectorAll('[id]')].map(n=>n.id); return new Set(ids).size===ids.length; }")
+                            checks["labeled_form_controls"] = page.evaluate(
+                                "() => [...document.querySelectorAll('input:not([type=hidden]),select,textarea')].every(n=>!!(n.labels?.length || n.getAttribute('aria-label')?.trim() || n.getAttribute('aria-labelledby')?.split(/\s+/).some(id=>document.getElementById(id)?.textContent.trim())))")
+                            checks["meaningful_document_metadata"] = page.evaluate(
+                                "() => !!(document.documentElement.lang.trim() && document.title.trim() && document.querySelector('meta[name=description]')?.content.trim())")
+                            checks["named_buttons_and_links"] = page.evaluate(
+                                "() => [...document.querySelectorAll('button,a[href]')].every(n=>!!(n.textContent.trim() || n.getAttribute('aria-label')?.trim()))")
                             details = page.locator("details.component-faq")
                             checks["faq_disclosures"] = True
                             for index in range(details.count()):
@@ -121,11 +135,13 @@ def check_browser(spec, output=None, engine="chromium", publish=False):
                             page.locator(f'nav a[href="{next_name}"]').click()
                             page.wait_for_load_state("load")
                             checks["navigation_click"] = page.url == ORIGIN + "/" + next_name
-                        except BrowserError:
+                        except BrowserError as exc:
                             checks["browser_operation"] = False
+                            if len(errors) < 20:
+                                errors.append(("Browser operation: " + str(exc))[:400])
                         checks["no_unexpected_requests"] = not blocked
                         checks["no_browser_errors"] = not errors
-                        results.append({"page": name, "width": width, "checks": checks})
+                        results.append({"page": name, "width": width, "checks": checks, "diagnostics": errors[:20]})
                         findings.extend({"page": name, "width": width, "check": key}
                                         for key, passed in checks.items() if not passed)
                 finally:

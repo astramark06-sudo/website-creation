@@ -20,6 +20,12 @@ class ProjectBrowserTests(unittest.TestCase):
         self.assertEqual(report["viewports"], [360, 768, 1440])
         self.assertEqual(len(report["project_sha256"]), 64)
         self.assertTrue(any(r["checks"].get("task_persistence") for r in report["results"]))
+        for result in report["results"]:
+            self.assertTrue(result["checks"]["unique_ids"])
+            self.assertTrue(result["checks"]["labeled_form_controls"])
+            self.assertTrue(result["checks"]["skip_target_focus"])
+            self.assertTrue(result["checks"]["named_buttons_and_links"])
+            self.assertEqual(result["diagnostics"], [])
 
     def test_refuse_tampered_output(self):
         spec = read_spec(ROOT / "projects" / "example.json")
