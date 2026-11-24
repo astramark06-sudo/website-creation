@@ -1,4 +1,5 @@
 """Internal worker for trusted fresh authenticated exports; all data is synthetic."""
+from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager, redirect_stdout
 import io
 import json
@@ -90,7 +91,23 @@ def check(engine):
         if other_record.data != sample(tables[0]):
             raise AuditFailure("Separate workspace changed")
 
-    with sync_playwright() as pw, local_server() as url:
+    # Playwright's synchronous API runs an asyncio loop on this thread.
+    # Django ORM operations must remain on a separate synchronous thread.
+    # Close each thread-local database connection even if a check raises.
+    def database_call(function):
+        try:
+            return function()
+        finally:
+            connections.close_all()
+
+    def created_record_id(table_id):
+        return Record.objects.get(workspace=workspace, table_id=table_id).pk
+
+    connections.close_all()
+    with ThreadPoolExecutor(max_workers=1) as database, sync_playwright() as pw, local_server() as url:
+        def query(function):
+            return database.submit(database_call, function).result()
+
         browser = getattr(pw, engine).launch()
         try:
             def context():
@@ -182,11 +199,11 @@ def check(engine):
                 if submitted.value.status != 302:
                     raise AuditFailure("Create form did not redirect")
                 expect(editor.locator(".record-grid article")).to_have_count(1)
-                row = Record.objects.get(workspace=workspace, table_id=name)
-                ids[name] = row.pk
-                expected[name] = [{"id": row.pk, "data": values}]
+                record_id = query(lambda: created_record_id(name))
+                ids[name] = record_id
+                expected[name] = [{"id": record_id, "data": values}]
             stage = "verify created records"
-            verify_database()
+            query(verify_database)
 
             stage = "editor edit and relation options"
             for table in tables:
@@ -201,7 +218,7 @@ def check(engine):
                     raise AuditFailure("Edit form did not redirect")
                 expect(editor.locator(".record-grid article")).to_have_count(1)
                 expected[name][0]["data"] = values
-                verify_database()
+                query(verify_database)
                 expect(editor.get_by_role("link", name="Delete record #" + str(ids[name]), exact=True)).to_have_count(0)
                 for width in WIDTHS:
                     editor.set_viewport_size({"width": width, "height": 900})
@@ -259,7 +276,7 @@ def check(engine):
                         if field["type"] == "relation" and field["target"] == name:
                             for row in expected[other_table["id"]]:
                                 row["data"][field["id"]] = None
-                verify_database()
+                query(verify_database)
 
             stage = "logout and browser errors"
             owner.get_by_role("button", name="Sign out", exact=True).click()
@@ -276,7 +293,6 @@ def check(engine):
                                "relation_cleanup": True, "logout": True, "no_unexpected_requests": True}}
         finally:
             browser.close()
-            connections.close_all()
 
 
 if __name__ == "__main__":
