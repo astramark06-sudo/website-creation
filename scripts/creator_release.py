@@ -120,6 +120,9 @@ def main():
     parser.add_argument("--report", type=Path, help="Write new JSON evidence file (never overwrite)")
     args = parser.parse_args()
     try:
+        if args.output is not None and args.report is not None:
+            if args.report.resolve().is_relative_to(args.output.resolve()):
+                raise ValueError("Keep release evidence outside the verified site directory")
         spec = read_spec(args.spec)
         if args.require_reviewed:
             validate_spec(spec, publish=True)
