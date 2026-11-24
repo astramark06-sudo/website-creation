@@ -1,15 +1,14 @@
 """Opt-in screenshot interpretation using a configured local Ollama vision model."""
 import base64
 import binascii
-import json
 
 try:
-    from .creator_ai import installed_model, local_request
-    from .creator_project import require_text, validate_spec, unique_object, reject_constant
+    from .creator_ai import installed_model, local_request, parse_model_json
+    from .creator_project import require_text, validate_spec
     from .creator_design import design_for
 except ImportError:
-    from creator_ai import installed_model, local_request
-    from creator_project import require_text, validate_spec, unique_object, reject_constant
+    from creator_ai import installed_model, local_request, parse_model_json
+    from creator_project import require_text, validate_spec
     from creator_design import design_for
 
 MAX_IMAGE = 64 * 1024
@@ -92,7 +91,7 @@ def vision_plan(image, title, objective, authorized, model, transport=local_requ
     content = result.get("response")
     if not isinstance(content, str) or len(content) > 8192:
         raise ValueError("Invalid local vision response")
-    selection = json.loads(content, object_pairs_hook=unique_object, parse_constant=reject_constant)
+    selection = parse_model_json(content)
     if not isinstance(selection, dict) or set(selection) != {"theme", "design", "structure"}:
         raise ValueError("Vision response must contain only approved preset selections")
     if not isinstance(selection["structure"], str) or selection["structure"] not in STRUCTURES:

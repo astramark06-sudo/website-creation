@@ -38,6 +38,15 @@ class VisionTests(unittest.TestCase):
                 vision_plan(image, "Original", "Guide", authorized, "vision:local", self.transport)
         self.assertEqual(self.calls, [])
 
+    def test_strict_json_response(self):
+        for raw in ('{"theme":"forest","theme":"blue"}', '{"theme":NaN}', "[" * 2000 + "]" * 2000):
+            def transport(path, data=None):
+                if path == "/api/tags":
+                    return {"models": [{"name": "vision:local", "size": 100, "digest": "example"}]}
+                return {"done": True, "response": raw}
+            with self.subTest(length=len(raw)), self.assertRaises(ValueError):
+                vision_plan(marker_image(), "Original", "Guide", True, "vision:local", transport)
+
     def test_extra_model_output_is_rejected(self):
         self.selection["html"] = "<script>bad</script>"
         with self.assertRaises(ValueError):

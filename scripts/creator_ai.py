@@ -2,17 +2,19 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 import urllib.error
 import urllib.request
 
 try:
-    from .creator_project import validate_spec, require_text, MAX_SPEC
+    from .creator_project import validate_spec, require_text, MAX_SPEC, unique_object, reject_constant
 except ImportError:
-    from creator_project import validate_spec, require_text, MAX_SPEC
+    from creator_project import validate_spec, require_text, MAX_SPEC, unique_object, reject_constant
 
 ENDPOINT = "http://127.0.0.1:11434"
 MAX_RESPONSE = 512 * 1024
+MAX_JSON_DEPTH = 32
 MODEL_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}\Z")
 SYSTEM = (
     "Create an independently authored website draft from the user's requirements. "
@@ -36,6 +38,44 @@ def valid_model(name):
     return isinstance(name, str) and MODEL_NAME.fullmatch(name) and "cloud" not in name.casefold()
 
 
+def finite_float(value):
+    number = float(value)
+    if not math.isfinite(number):
+        raise ValueError("Non-finite JSON number")
+    return number
+
+
+def parse_model_json(content):
+    """Bound container depth before decoding, independently of Python version."""
+    try:
+        if not isinstance(content, str) or len(content) > MAX_RESPONSE:
+            raise ValueError("Invalid local JSON size")
+        depth = 0
+        quoted = escaped = False
+        for char in content:
+            if quoted:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    quoted = False
+            elif char == '"':
+                quoted = True
+            elif char in "[{":
+                depth += 1
+                if depth > MAX_JSON_DEPTH:
+                    raise ValueError("Local JSON nesting exceeds limit")
+            elif char in "]}":
+                depth -= 1
+                if depth < 0:
+                    raise ValueError("Invalid local JSON")
+        return json.loads(content, object_pairs_hook=unique_object,
+                          parse_constant=reject_constant, parse_float=finite_float)
+    except (ValueError, TypeError, RecursionError) as exc:
+        raise ValueError("Invalid structured local model response") from exc
+
+
 def local_request(path, data=None):
     if path not in ("/api/tags", "/api/generate"):
         raise ValueError("Unexpected endpoint")
@@ -48,7 +88,7 @@ def local_request(path, data=None):
             raw = response.read(MAX_RESPONSE + 1)
         if len(raw) > MAX_RESPONSE:
             raise ValueError("Local model response exceeds limit")
-        return json.loads(raw.decode("utf-8"))
+        return parse_model_json(raw.decode("utf-8"))
     except (OSError, urllib.error.URLError, ValueError) as exc:
         raise ValueError("Local Ollama unavailable or response invalid") from exc
 
@@ -61,8 +101,8 @@ def installed_model(model, transport=local_request):
         raise ValueError("Invalid local model inventory")
     for item in result["models"]:
         if (isinstance(item, dict) and item.get("name") == model and
-                isinstance(item.get("size"), int) and item["size"] > 0 and
-                item.get("digest") and not item.get("remote_host") and
+                type(item.get("size")) is int and item["size"] > 0 and
+                isinstance(item.get("digest"), str) and item["digest"].strip() and not item.get("remote_host") and
                 not item.get("remote_model")):
             return
     raise ValueError("Configured local model is not installed; no model is downloaded automatically")
@@ -81,7 +121,7 @@ def generate_draft(prompt, model, transport=local_request):
     content = response.get("response")
     if not isinstance(content, str) or len(content.encode("utf-8")) > MAX_SPEC:
         raise ValueError("Invalid draft response")
-    draft = json.loads(content)
+    draft = parse_model_json(content)
     if not isinstance(draft, dict) or set(draft) != {"title", "description", "theme", "pages"}:
         raise ValueError("Local model did not return the expected draft fields")
     draft["version"] = 1

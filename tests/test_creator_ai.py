@@ -1,8 +1,9 @@
 """Test the local AI boundary with a fake transport, never real inference."""
 import json
 import unittest
+from unittest.mock import patch, MagicMock
 
-from scripts.creator_ai import generate_draft, installed_model
+from scripts.creator_ai import generate_draft, installed_model, local_request, parse_model_json, MAX_JSON_DEPTH
 
 
 class CreatorAITests(unittest.TestCase):
@@ -27,6 +28,49 @@ class CreatorAITests(unittest.TestCase):
         self.assertEqual(draft["version"], 1)
         self.assertEqual([p for p, _ in calls], ["/api/tags", "/api/generate"])
         self.assertFalse(calls[1][1]["stream"])
+
+    def test_duplicate_fields_nonfinite_and_excessive_nesting_are_rejected(self):
+        valid = json.dumps(self.example())
+        invalid = [
+            valid.replace('"theme": "teal"', '"theme": "teal", "theme": "blue"'),
+            valid.replace('"heading": "About"', '"heading": "About", "heading": "Other"'),
+            valid.replace('"theme": "teal"', '"theme": NaN'),
+            "[" * 2000 + "]" * 2000,
+        ]
+        for raw in invalid:
+            def transport(path, data=None):
+                if path == "/api/tags":
+                    return {"models": [{"name": "local:latest", "size": 100, "digest": "example"}]}
+                return {"done": True, "response": raw}
+            with self.subTest(length=len(raw)), self.assertRaises(ValueError):
+                generate_draft("Website", "local:latest", transport)
+
+    def test_http_response_uses_strict_json(self):
+        for raw in (b'{"done": true, "done": false}', b'{"value": Infinity}',
+                    b"[" * 2000 + b"]" * 2000):
+            with self.subTest(length=len(raw)), patch("scripts.creator_ai.urllib.request.build_opener") as factory:
+                response = MagicMock()
+                response.__enter__.return_value.read.return_value = raw
+                factory.return_value.open.return_value = response
+                with self.assertRaises(ValueError):
+                    local_request("/api/tags")
+
+    def test_fixed_depth_and_finite_float_boundary(self):
+        quoted = 'Text with ' + "[" * 100 + ' and a "quoted" value'
+        self.assertEqual(parse_model_json(json.dumps({"text": quoted})), {"text": quoted})
+        self.assertEqual(parse_model_json("[" * MAX_JSON_DEPTH + "0" + "]" * MAX_JSON_DEPTH),
+                         json.loads("[" * MAX_JSON_DEPTH + "0" + "]" * MAX_JSON_DEPTH))
+        for raw in ("[" * (MAX_JSON_DEPTH + 1) + "]" * (MAX_JSON_DEPTH + 1),
+                    '{"value": 1e999}', '{"value": -1e999}', ']["'):
+            with self.subTest(raw=raw), self.assertRaises(ValueError):
+                parse_model_json(raw)
+
+    def test_inventory_requires_valid_size_and_digest(self):
+        for size, digest in ((True, "example"), (100, True), (100, " "), (0, "example")):
+            def transport(path, data=None):
+                return {"models": [{"name": "local:latest", "size": size, "digest": digest}]}
+            with self.subTest(size=size, digest=digest), self.assertRaises(ValueError):
+                installed_model("local:latest", transport)
 
     def test_model_cannot_approve_publication(self):
         draft = self.example()
