@@ -16,21 +16,70 @@ function field(parent,label,value,update,opts={}){
   const c=document.createElement(opts.choices?'select':opts.multiline?'textarea':'input');
   for(const choice of opts.choices||[]){const o=document.createElement('option');o.value=choice;o.textContent=choice;c.append(o);}
   c.value=value;c.disabled=!!opts.disabled;if(opts.max)c.maxLength=opts.max;
-  c.addEventListener('input',()=>{update(c.value);dirty();});wrap.append(c);parent.append(wrap);
+  c.addEventListener('input',()=>{update(c.value);dirty();});wrap.append(c);parent.append(wrap);return c;
 }
 function updatePages(){
   const prior=$('preview-page').value;$('preview-page').replaceChildren();
   for(const p of project.pages){const o=document.createElement('option');o.value=p.slug;o.textContent=p.title||p.slug;$('preview-page').append(o);}
   if(project.pages.some(p=>p.slug===prior))$('preview-page').value=prior;
 }
+// Use the same allowed page addresses and whitespace as the server.
+// Preserve link labels and line separators; never replace ordinary prose.
+const reservedPageAddresses=new Set(['index','style','app','creator-manifest','favicon','search','con','prn','aux','nul',...Array.from({length:9},(_,i)=>'com'+(i+1)),...Array.from({length:9},(_,i)=>'lpt'+(i+1))]);
+const trimLink=s=>s.replace(/^[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[\u0009-\u000d\u001c-\u0020\u0085\u00a0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$/gu,'');
+function rewriteLinkTargets(body,oldAddress,newAddress){
+  let count=0;
+  const text=body.split(/(\r\n|[\n\r\u0085\u2028\u2029])/u).map(line=>{
+    const parts=line.split('|');
+    if(parts.length!==2||!trimLink(parts[0])||trimLink(parts[1])!==oldAddress)return line;
+    count++;
+    const start=parts[1].indexOf(oldAddress);
+    return parts[0]+'|'+parts[1].slice(0,start)+newAddress+parts[1].slice(start+oldAddress.length);
+  }).join('');
+  return {text,count};
+}
+function incomingPageLinks(address,exclude=null){
+  return project.pages.flatMap(p=>p===exclude?[]:p.sections.filter(s=>s.kind==='links').map(s=>({
+    section:s,...rewriteLinkTargets(s.body,address,address)
+  }))).filter(item=>item.count);
+}
+function pageAddressField(parent,p,i,bodyControls){
+  const wrap=document.createElement('label');wrap.textContent='Page address';
+  const control=document.createElement('input');control.value=p.slug;control.maxLength=48;control.disabled=i===0;
+  control.addEventListener('input',()=>dirty());
+  control.addEventListener('change',()=>{
+    const next=control.value,old=p.slug;
+    if(next===old)return;
+    if(!/^[a-z][a-z0-9-]{0,47}$/.test(next)||reservedPageAddresses.has(next)||project.pages.some(other=>other!==p&&other.slug===next)){
+      control.value=old;status('Invalid or duplicate page address. Previous address retained.');return;
+    }
+    const updates=incomingPageLinks(old).map(item=>({section:item.section,...rewriteLinkTargets(item.section.body,old,next)}));
+    if(updates.some(item=>Array.from(item.text).length>4000)){
+      control.value=old;status('Shorten incoming link sections before renaming this page.');return;
+    }
+    const wasSelected=$('preview-page').value===old;
+    p.slug=next;
+    for(const item of updates){
+      item.section.body=item.text;
+      const input=bodyControls.get(item.section);
+      if(input)input.value=item.text;
+    }
+    dirty();updatePages();
+    if(wasSelected)$('preview-page').value=next;
+    $('frame').srcdoc='';
+    status('Page address updated. '+updates.reduce((total,item)=>total+item.count,0)+' page links updated. Refresh preview or export.');
+  });
+  wrap.append(control);parent.append(wrap);
+}
 function render(){
   for(const k of ['title','description','theme'])$(k).value=project[k];
   for(const k of Object.keys(defaultDesign()))$(k).value=(project.design||defaultDesign())[k];
   $('pages').replaceChildren();
+  const bodyControls=new Map();
   project.pages.forEach((p,i)=>{
     const card=document.createElement('article');card.className='page-card';
     const h=document.createElement('h3');h.textContent='Page '+(i+1);card.append(h);
-    field(card,'Page address',p.slug,v=>{p.slug=v;updatePages();},{disabled:i===0,max:48});
+    pageAddressField(card,p,i,bodyControls);
     field(card,'Page title',p.title,v=>{p.title=v;updatePages();},{max:120});
     field(card,'Introduction',p.intro,v=>p.intro=v,{multiline:true,max:1000});
     field(card,'Interaction',p.interaction,v=>p.interaction=v,{choices:['none','tasks','search']});
@@ -38,13 +87,13 @@ function render(){
       const block=document.createElement('div');block.className='section-card';
       field(block,'Component type',s.kind||'card',v=>{s.kind=v;render();},{choices:['card','article','callout','faq','list','steps','metrics','timeline','table','links']});
       field(block,'Section heading',s.heading,v=>s.heading=v,{max:120});
-      field(block,'Section body',s.body,v=>s.body=v,{multiline:true,max:4000});
+      bodyControls.set(s,field(block,'Section body',s.body,v=>s.body=v,{multiline:true,max:4000}));
       const hints={
         list:'One item per line (up to 30).',steps:'One step per line (up to 30).',
         metrics:'One metric per line: Label | Value (up to 12).',
         timeline:'One event per line: Label | Details (up to 20).',
         table:'First line is the header; use 2–6 pipe-separated cells per row and up to 30 data rows.',
-        links:'One link per line: Link label | page-address (up to 8). Use an existing page address, e.g. Home | home. Update links if a page is renamed or removed.'
+        links:'One link per line: Link label | page-address (up to 8). Use an existing page address, e.g. Home | home. Renaming a page updates its links; remove or redirect incoming links before deleting a page.'
       };
       if(hints[s.kind]){const hint=document.createElement('p');hint.className='section-hint';hint.textContent=hints[s.kind];block.append(hint);}
       const handle=document.createElement('button');handle.type='button';handle.className='drag-handle';handle.draggable=true;handle.textContent='Drag to reorder';handle.setAttribute('aria-label','Drag section '+(j+1)+' to reorder; use move buttons for keyboard ordering');
@@ -62,7 +111,11 @@ function render(){
       card.append(block);
     });
     action(card,'Add section',()=>{if(p.sections.length>=12){status('Maximum 12 sections per page.');return;}p.sections.push({heading:'New section',body:'Add original content.'});dirty();render();});
-    if(i>0)action(card,'Remove page',()=>{project.pages.splice(i,1);dirty();render();});
+    if(i>0)action(card,'Remove page',()=>{
+      const incoming=incomingPageLinks(p.slug,p);
+      if(incoming.length){status('Cannot remove a referenced page. Redirect or remove its '+incoming.reduce((total,item)=>total+item.count,0)+' incoming links first.');return;}
+      project.pages.splice(i,1);dirty();render();$('frame').srcdoc='';
+    });
     $('pages').append(card);
   });
   updatePages();
