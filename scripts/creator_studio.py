@@ -19,6 +19,7 @@ try:
     from .creator_tools import overview, query_tool, propose_plan
     from .creator_release import release_report
     from .creator_browser import check_browser
+    from .creator_visual_reference import visual_plan
 except ImportError:
     from creator_project import MAX_SPEC, assemble, build, read_spec, validate_spec
     from creator_reference import reference_plan
@@ -27,6 +28,7 @@ except ImportError:
     from creator_tools import overview, query_tool, propose_plan
     from creator_release import release_report
     from creator_browser import check_browser
+    from creator_visual_reference import visual_plan
 
 ROOT = Path(__file__).resolve().parents[1]
 UI = ROOT / "studio"
@@ -102,7 +104,8 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
                 return
             routes = {"/": ("index.html", "text/html; charset=utf-8"),
                       "/studio.css": ("studio.css", "text/css; charset=utf-8"),
-                      "/studio.js": ("studio.js", "text/javascript; charset=utf-8")}
+                      "/studio.js": ("studio.js", "text/javascript; charset=utf-8"),
+                      "/visual-reference.js": ("visual-reference.js", "text/javascript; charset=utf-8")}
             if self.path == "/api/session":
                 self.send_json(200, {"token": token, "project": read_spec(ROOT / "projects" / "example.json"), "ai_enabled": ai_model is not None, "browser_checks_enabled": browser_checks})
             elif self.path in routes:
@@ -117,7 +120,7 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
             if self.headers.get("Origin") != origin or not secrets.compare_digest(self.headers.get("X-Creator-Token", ""), token):
                 self.send_json(403, {"error": "Local session required"})
                 return
-            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check"):
+            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check", "/api/visual-reference"):
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
@@ -152,6 +155,8 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
                 elif self.path == "/api/fullstack-export":
                     data = export_fullstack(payload["title"], payload["description"])
                     self.send_data(200, data, "application/zip", {"Content-Disposition": 'attachment; filename="local-data-workspace.zip"'})
+                elif self.path == "/api/visual-reference":
+                    self.send_json(200, visual_plan(payload["observations"], payload["title"], payload["objective"], payload["authorized"]))
                 elif self.path == "/api/reference":
                     self.send_json(200, reference_plan(payload["source"], payload["title"], payload["objective"], payload["authorized"]))
                 elif self.path == "/api/preview":

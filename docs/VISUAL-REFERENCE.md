@@ -1,0 +1,7 @@
+# Screenshot-informed original design
+
+Open Screenshot-informed design in Master Creator Studio. Select a PNG or JPEG you have permission to analyze, confirm permission, and request a draft. The browser decodes a bounded local image, samples a 96 by 96 grid, and classifies coarse aspect, palette family, edge variation and brightness. The server receives only four categorical observations plus the user's existing title and objective. Image bytes never leave the browser. Limits are 8 MiB, 16 megapixels and 8192 pixels on either axis. Unsupported formats, including SVG, are rejected.
+
+The planner selects existing independently authored theme and layout presets. It does not recover exact colors, text, graphics, branding, source code or backend logic; edge variation is not semantic understanding of a page. Accepting the proposal replaces the current draft only after confirmation. The result is not a screenshot-to-code replica or proof of originality. Review the design and replace starter content before publication. No additional model, service or dependency is required.
+
+Regression tests validate the category-only boundary. The browser test analyzes a synthetic PNG and verifies that only categorical observations are transmitted. The existing HTML reference analysis remains separate.
