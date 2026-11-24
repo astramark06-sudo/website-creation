@@ -52,6 +52,11 @@
 <p>Review the layout at three viewport widths. Test interactions in the exported site.</p>
 <div class="actions"><label>Page<select id="preview-page"></select></label><label>Viewport<select id="viewport"><option value="100%">Desktop</option><option value="768px">Tablet</option><option value="390px">Mobile</option></select></label><button id="preview">Refresh preview</button></div>
 <div class="frame-wrap"><iframe id="frame" title="Website preview" sandbox="" referrerpolicy="no-referrer"></iframe></div>
+<h2>Release readiness</h2>
+<p>Check this exact draft's build and basic structure. Human review, project-specific browser tests and public deployment evidence are still required.</p>
+<div class="actions"><button id="release-check" type="button">Check release readiness</button><button id="release-save" type="button" disabled>Download review report</button></div>
+<p id="release-status" role="status" aria-live="polite">No report for this draft.</p>
+<div id="release-results"></div>
 <h2>Build and export</h2>
 <p>Export verified original website files and editable JSON. Publication requires separate content-rights, originality and release approval.</p>
 <button id="export" class="primary">Build and export ZIP</button>
