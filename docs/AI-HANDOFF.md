@@ -7,6 +7,12 @@
 
 > This is a dated handoff snapshot, not live state. Before acting, fetch the current `main` head, open pull requests, recent Actions runs, and repository rulesets. Another agent or session may have changed the repository since this file was written.
 
+## Continuation checkpoint — 2026-11-25
+
+Verified main at `a556308875c00e141ddb19a62ac90ea4d0439983`. PRs #55, #56, #59, #60, #61, #62, #63 and #64 each merged after all eight workflows passed on their respective latest PR heads. The combined main SHA did not yet have separate workflow results when checked. The merged implementation preserves multi-page authorized local reference analysis, portable bundle verification/reopening, separate private staging recovery copies, exact-output reviewed release checks, ten original component types, automatic internal link maintenance, and strict local AI/vision JSON handling. The actual production project has not been selected; `projects/publish.json` did not exist when checked.
+
+The next development branch, PR #65, adds non-deploying GitHub Actions draft preflight and a matching verified ZIP and browser evidence report. Check its current state and exact CI results before acting. The workflow must not be confused with publication: it clears approvals and never deploys. Public repository artifacts are not a place for private content. No production backend host or automatic database activation is provisioned. Continue from observed gaps, preserve zero-spend and original/licensed content, and do not publish without explicit authorization.
+
 ## Continuation checkpoint — 2026-11-24
 
 The original November 3 snapshot below is retained as historical context. At commit `44663d337cf90c1b788a2cc9b70c52831cde93f4`, the repository is a reusable website creation toolkit, not an empty starter.
