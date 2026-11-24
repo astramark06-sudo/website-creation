@@ -15,7 +15,7 @@ from django.db import connection
 from django.test import Client, TestCase, TransactionTestCase
 
 from scripts.creator_relational import read_schema
-from .backup import backup_staging
+from .backup import backup_staging, check_backup
 from .login_guard import MAX_ATTEMPTS, reserve_attempt
 from .models import LoginBudget, Membership, Record, Workspace
 
@@ -86,6 +86,16 @@ class BackupTests(TransactionTestCase):
             self.assertEqual(Record.objects.count(), 1)
             before = target.read_bytes()
             self.assertNotIn(session_key.encode("ascii"), before)
+            expected = {"workspaces": 1, "records": 1, "sessions_retained": 0}
+            self.assertEqual(check_backup(target), expected)
+            verification = io.StringIO()
+            call_command("backup_staging", verify=target, stdout=verification)
+            self.assertIn("Offline snapshot checks passed", verification.getvalue())
+            self.assertEqual(target.read_bytes(), before)
+            self.assertEqual(sorted(p.name for p in Path(temp).iterdir()), ["backup.sqlite3"])
+            with self.assertRaises(ValueError):
+                check_backup(source)
+            self.assertTrue(Session.objects.filter(session_key=session_key).exists())
             self.assertTrue(Session.objects.filter(session_key=session_key).exists())
             with self.assertRaises(CommandError):
                 call_command("backup_staging", output=target, stdout=out)
@@ -106,3 +116,12 @@ class BackupTests(TransactionTestCase):
             with self.assertRaises(FileExistsError):
                 backup_staging(source, target)
             self.assertEqual(target.read_bytes(), b"untouched")
+            with self.assertRaises(sqlite3.Error):
+                check_backup(target)
+            with self.assertRaises(ValueError):
+                check_backup(Path(temp) / "missing.sqlite3")
+            sidecar = Path(str(source) + "-wal")
+            sidecar.write_bytes(b"synthetic")
+            with self.assertRaisesRegex(ValueError, "sidecar"):
+                check_backup(source)
+            self.assertEqual(sidecar.read_bytes(), b"synthetic")
