@@ -18,6 +18,7 @@ try:
     from .creator_fullstack import export_fullstack
     from .creator_relational_export import export_relational
     from .creator_relational import validate_schema
+    from .creator_relational_check import check_relational
     from .creator_tools import overview, query_tool, propose_plan
     from .creator_release import release_report
     from .creator_browser import check_browser
@@ -29,6 +30,7 @@ except ImportError:
     from creator_fullstack import export_fullstack
     from creator_relational_export import export_relational
     from creator_relational import validate_schema
+    from creator_relational_check import check_relational
     from creator_tools import overview, query_tool, propose_plan
     from creator_release import release_report
     from creator_browser import check_browser
@@ -125,7 +127,7 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
             if self.headers.get("Origin") != origin or not secrets.compare_digest(self.headers.get("X-Creator-Token", ""), token):
                 self.send_json(403, {"error": "Local session required"})
                 return
-            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/relational-export", "/api/relational-validate", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check", "/api/visual-reference"):
+            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/relational-export", "/api/relational-validate", "/api/relational-check", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check", "/api/visual-reference"):
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
@@ -161,6 +163,14 @@ def make_handler(port, token, ai_model=None, browser_checks=False):
                     self.send_json(200, query_tool(payload))
                 elif self.path == "/api/tool-plan":
                     self.send_json(200, propose_plan(payload))
+                elif self.path == "/api/relational-check":
+                    if not browser_checks:
+                        self.send_json(403, {"error": "Browser checks are not enabled"})
+                        return
+                    if set(payload) != {"title", "description", "schema", "engine", "confirmed"} or payload["confirmed"] is not True:
+                        raise ValueError("Explicit application check consent required")
+                    self.send_json(200, check_relational(payload["title"], payload["description"],
+                                                         payload["schema"], payload["engine"]))
                 elif self.path == "/api/relational-validate":
                     if set(payload) != {"schema"}:
                         raise ValueError("Expected relational schema")

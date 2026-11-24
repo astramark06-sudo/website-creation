@@ -23,7 +23,7 @@
     const block=document.createElement('fieldset');block.className=cls;
     const title=document.createElement('legend');title.textContent=legend;block.append(title);parent.append(block);return block;
   }
-  window.initRelationalDesigner=({example,validate,download})=>{
+  window.initRelationalDesigner=({example,validate,download,onChange=()=>{}})=>{
     let schema=null,manual=false,pending=false,revision=0,nextTable=1,nextField=1;
     const raw=$('relational-schema'),visual=$('relational-visual'),host=$('relational-tables'),add=$('relational-add-table');
     const say=text=>{$('relational-design-status').textContent=text;};
@@ -42,7 +42,7 @@
     }
     function write(message='Schema updated. Export will validate all fields.'){
       revision++;
-      raw.value=JSON.stringify(schema,null,2);
+      raw.value=JSON.stringify(schema,null,2);onChange();
       // The backend checks UTF-8 length and the complete schema at export.
       say(message);
     }
@@ -115,7 +115,7 @@
     });
     $('relational-example').addEventListener('click',()=>{if(replaceAllowed())replaceSchema(example);});
     raw.addEventListener('input',()=>{
-      revision++;manual=true;visual.hidden=true;raw.removeAttribute('aria-invalid');
+      revision++;manual=true;visual.hidden=true;raw.removeAttribute('aria-invalid');onChange();
       say('JSON edited. Validate and apply it to resume visual editing.');
     });
     $('relational-apply-json').addEventListener('click',async()=>{
