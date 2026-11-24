@@ -3,6 +3,7 @@ from contextlib import closing
 import os
 from pathlib import Path
 import sqlite3
+import shutil
 
 REQUIRED_TABLES = {
     "django_migrations", "django_session", "auth_user", "staging_auth_workspace",
@@ -69,3 +70,41 @@ def backup_staging(source, destination):
         destination.unlink()
         raise
     return report
+
+
+def recovery_copy(source, destination):
+    """Prepare a new private database for a separate, stopped recovery installation.
+
+    The source must be a trusted standalone snapshot. This does not activate
+    the database, alter settings, migrate its schema, or reconcile old roles.
+    """
+    source = Path(source).resolve()
+    destination = Path(destination)
+    if destination.suffix != ".sqlite3":
+        raise ValueError("Choose a new .sqlite3 recovery destination")
+    if not destination.parent.is_dir():
+        raise ValueError("Choose an existing private recovery directory")
+    if any(os.path.lexists(str(destination) + suffix) for suffix in ("-wal", "-shm", "-journal")):
+        raise ValueError("Recovery destination has existing SQLite sidecars")
+    expected = check_backup(source)
+    fd = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    try:
+        with os.fdopen(fd, "wb") as output, source.open("rb") as original:
+            shutil.copyfileobj(original, output, length=1024 * 1024)
+            output.flush()
+            os.fsync(output.fileno())
+        actual = check_backup(destination)
+        if actual != expected:
+            raise ValueError("Recovery copy differs from checked snapshot")
+        # Compare bytes in bounded chunks, not merely row counts.
+        with source.open("rb") as original, destination.open("rb") as copied:
+            while True:
+                block = original.read(1024 * 1024)
+                if block != copied.read(1024 * 1024):
+                    raise ValueError("Recovery copy differs from checked snapshot")
+                if not block:
+                    break
+        return actual
+    except BaseException:
+        destination.unlink()
+        raise
