@@ -32,6 +32,7 @@ jobs:
       - name: Install browser engines
         run: python -m playwright install --with-deps chromium firefox webkit
       - name: Build and verify portable draft
+        id: preflight
         env:
           PROJECT_CHOICE: ${{ inputs.project }}
         run: |
@@ -46,8 +47,14 @@ jobs:
           fi
           mkdir -p build
           python scripts/creator_preflight.py --spec "$spec" --output build/preflight --engine chromium --engine firefox --engine webkit
+      - name: Independently check the downloadable evidence
+        id: verify
+        run: python scripts/creator_preflight_verify.py build/preflight --engine chromium --engine firefox --engine webkit
       - name: Preserve draft and evidence
-        if: always() && hashFiles('build/preflight/preflight-report.json') != ''
+        if: >-
+          always() && hashFiles('build/preflight/preflight-report.json') != '' &&
+          (steps.verify.outcome == 'success' ||
+          (steps.preflight.outcome == 'failure' && hashFiles('build/preflight/creator-project.zip') == ''))
         uses: actions/upload-artifact@v4
         with:
           name: creator-draft-${{ github.sha }}
