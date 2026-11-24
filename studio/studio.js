@@ -304,6 +304,14 @@ async function start(){
     $('relational-check-save').addEventListener('click',()=>{
       if(relationalReport)download(new Blob([JSON.stringify(relationalReport,null,2)],{type:'application/json'}),'relational-report.json');
     });
+    $('authenticated-export').addEventListener('click',()=>run(async()=>{
+      if(!confirm('Export a separate local Django staging app for synthetic data and test accounts only? This does not publish a website.'))return;
+      const schema=JSON.parse($('relational-schema').value);
+      status('Building authenticated local staging app…');
+      const r=await request('/api/authenticated-export',{title:project.title,description:project.description,schema,confirmed:true});
+      download(await r.blob(),'authenticated-local-staging.zip');
+      status('Authenticated staging bundle exported. Follow its README for local setup.');
+    }));
     $('relational-export').addEventListener('click',()=>run(async()=>{
       const schema=JSON.parse($('relational-schema').value);
       status('Building relational database app…');

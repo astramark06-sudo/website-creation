@@ -18,6 +18,7 @@ try:
     from .creator_vision import vision_plan
     from .creator_fullstack import export_fullstack
     from .creator_relational_export import export_relational
+    from .creator_authenticated_export import export_authenticated
     from .creator_relational import validate_schema
     from .creator_relational_check import check_relational
     from .creator_tools import overview, query_tool, propose_plan
@@ -31,6 +32,7 @@ except ImportError:
     from creator_vision import vision_plan
     from creator_fullstack import export_fullstack
     from creator_relational_export import export_relational
+    from creator_authenticated_export import export_authenticated
     from creator_relational import validate_schema
     from creator_relational_check import check_relational
     from creator_tools import overview, query_tool, propose_plan
@@ -129,7 +131,7 @@ def make_handler(port, token, ai_model=None, browser_checks=False, vision_model=
             if self.headers.get("Origin") != origin or not secrets.compare_digest(self.headers.get("X-Creator-Token", ""), token):
                 self.send_json(403, {"error": "Local session required"})
                 return
-            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/relational-export", "/api/relational-validate", "/api/relational-check", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check", "/api/visual-reference", "/api/vision-reference"):
+            if self.path not in ("/api/preview", "/api/export", "/api/reference", "/api/ai-draft", "/api/fullstack-export", "/api/relational-export", "/api/authenticated-export", "/api/relational-validate", "/api/relational-check", "/api/tool-query", "/api/tool-plan", "/api/tool-overview", "/api/release-report", "/api/browser-check", "/api/visual-reference", "/api/vision-reference"):
                 self.send_json(404, {"error": "Not found"})
                 return
             try:
@@ -177,6 +179,11 @@ def make_handler(port, token, ai_model=None, browser_checks=False, vision_model=
                     if set(payload) != {"schema"}:
                         raise ValueError("Expected relational schema")
                     self.send_json(200, {"schema": validate_schema(payload["schema"])})
+                elif self.path == "/api/authenticated-export":
+                    if set(payload) != {"title", "description", "schema", "confirmed"} or payload["confirmed"] is not True:
+                        raise ValueError("Explicit local staging export consent required")
+                    data = export_authenticated(payload["title"], payload["description"], payload["schema"])
+                    self.send_data(200, data, "application/zip", {"Content-Disposition": 'attachment; filename="authenticated-local-staging.zip"'})
                 elif self.path == "/api/relational-export":
                     if set(payload) != {"title", "description", "schema"}:
                         raise ValueError("Invalid relational export fields")
