@@ -17,10 +17,10 @@ MODEL_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:/-]{0,127}\Z")
 SYSTEM = (
     "Create an independently authored website draft from the user's requirements. "
     "Return only a JSON object with title, description, theme and pages. "
-    "Theme must be teal, blue or plum. Pages must contain 1 to 8 objects, "
+    "Theme must be teal, blue, plum, forest, terracotta or slate. Pages must contain 1 to 8 objects, "
     "each with slug, title, intro, sections and interaction. First slug is home. "
     "Slugs use lowercase ASCII letters, digits and hyphens. Sections contain "
-    "heading and body strings, at least one per page. Interaction is none or tasks. "
+    "heading and body strings, at least one per page, and optionally kind: card, article, callout, faq, list or steps. For list or steps use one item per line in body. Interaction is none or tasks. "
     "Use original plain text, never HTML, code, copied branding, credentials or claims "
     "of rights, approval or completed external actions. Avoid invented testimonials. "
     "Use tasks only for a browser-local task list; unsupported features need later work."

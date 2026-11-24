@@ -35,8 +35,21 @@ function render(){
     field(card,'Interaction',p.interaction,v=>p.interaction=v,{choices:['none','tasks']});
     p.sections.forEach((s,j)=>{
       const block=document.createElement('div');block.className='section-card';
+      field(block,'Component type',s.kind||'card',v=>{s.kind=v;render();},{choices:['card','article','callout','faq','list','steps']});
       field(block,'Section heading',s.heading,v=>s.heading=v,{max:120});
       field(block,'Section body',s.body,v=>s.body=v,{multiline:true,max:4000});
+      if(['list','steps'].includes(s.kind)){
+        const hint=document.createElement('p');hint.className='section-hint';hint.textContent='One item per line (up to 30).';block.append(hint);
+      }
+      const handle=document.createElement('button');handle.type='button';handle.className='drag-handle';handle.draggable=true;handle.textContent='Drag to reorder';handle.setAttribute('aria-label','Drag section '+(j+1)+' to reorder; use move buttons for keyboard ordering');
+      handle.addEventListener('dragstart',event=>{event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',JSON.stringify({page:i,section:j}));});
+      block.addEventListener('dragover',event=>{event.preventDefault();event.dataTransfer.dropEffect='move';});
+      block.addEventListener('drop',event=>{event.preventDefault();try{
+        const move=JSON.parse(event.dataTransfer.getData('text/plain'));
+        if(!move||move.page!==i||!Number.isInteger(move.section)||move.section<0||move.section>=p.sections.length||move.section===j)return;
+        const [item]=p.sections.splice(move.section,1);p.sections.splice(j,0,item);dirty();render();
+      }catch(_){/* Ignore unrelated dragged data. */}});
+      block.append(handle);
       if(j>0)action(block,'Move section up',()=>{[p.sections[j-1],p.sections[j]]=[p.sections[j],p.sections[j-1]];dirty();render();});
       if(j<p.sections.length-1)action(block,'Move section down',()=>{[p.sections[j+1],p.sections[j]]=[p.sections[j],p.sections[j+1]];dirty();render();});
       if(p.sections.length>1)action(block,'Remove section',()=>{p.sections.splice(j,1);dirty();render();});
