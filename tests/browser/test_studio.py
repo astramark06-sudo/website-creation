@@ -6,6 +6,8 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
+
+from browser_engine import launch_browser
 import zipfile
 
 from playwright.sync_api import expect, sync_playwright
@@ -37,7 +39,7 @@ class QuietFiles(http.server.SimpleHTTPRequestHandler):
 class StudioBrowserTests(unittest.TestCase):
     def test_edit_preview_export_and_task_persistence(self):
         with tempfile.TemporaryDirectory() as tmp, sync_playwright() as pw:
-            browser = pw.chromium.launch()
+            browser = launch_browser(pw)
             context = browser.new_context(viewport={"width": 1440, "height": 900}, accept_downloads=True)
             try:
                 page = context.new_page()
@@ -88,7 +90,7 @@ class StudioBrowserTests(unittest.TestCase):
 
     def test_tool_center(self):
         with sync_playwright() as pw, serve(lambda port: make_handler(port, "test-token")) as url:
-            browser = pw.chromium.launch()
+            browser = launch_browser(pw)
             try:
                 page = browser.new_page()
                 page.goto(url)

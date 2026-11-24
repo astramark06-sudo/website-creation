@@ -1,6 +1,8 @@
 """Test selecting and composing original components in the graphical studio."""
 import unittest
 
+from browser_engine import launch_browser
+
 from playwright.sync_api import expect, sync_playwright
 from scripts.creator_studio import make_handler
 from test_studio import serve
@@ -9,7 +11,7 @@ from test_studio import serve
 class ComponentBrowserTests(unittest.TestCase):
     def test_component_selection_and_keyboard_ordering(self):
         with sync_playwright() as pw, serve(lambda port: make_handler(port, "component-test")) as url:
-            browser = pw.chromium.launch()
+            browser = launch_browser(pw)
             try:
                 page = browser.new_page()
                 page.goto(url)

@@ -3,6 +3,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
+from browser_engine import launch_browser, browser_engine
+
 from playwright.sync_api import expect, sync_playwright
 from scripts.creator_project import read_spec, build
 from scripts.creator_browser import check_browser
@@ -19,14 +21,14 @@ class SearchBoundaryTests(unittest.TestCase):
             {"heading": "Résumé", "body": "First | Value\nSecond | Other", "kind": "metrics"},
             {"heading": "Other section", "body": "Separate text"},
         ]
-        report = check_browser(spec)
+        report = check_browser(spec, engine=browser_engine())
         self.assertEqual(report["status"], "passed", report["results"])
         self.assertEqual(sum(result["checks"].get("search_positive_result", False)
                              for result in report["results"]), 3)
         with tempfile.TemporaryDirectory() as tmp, sync_playwright() as pw:
             out = Path(tmp) / "site"
             build(spec, out)
-            browser = pw.chromium.launch()
+            browser = launch_browser(pw)
             try:
                 with serve(lambda port: lambda *args, **kw: QuietFiles(*args, directory=str(out), **kw)) as url:
                     page = browser.new_page()
