@@ -108,6 +108,41 @@ class StudioBrowserTests(unittest.TestCase):
             finally:
                 browser.close()
 
+    def test_json_import_validates_raw_source_and_clears_approvals(self):
+        with sync_playwright() as pw, serve(lambda port: make_handler(port, "import-test")) as url:
+            browser = launch_browser(pw)
+            try:
+                page = browser.new_page()
+                page.goto(url)
+                expect(page.locator("#status")).to_contain_text("Preview generated")
+                title = page.get_by_label("Website name")
+                title.fill("Current project")
+                spec = read_spec(ROOT / "projects" / "example.json")
+                spec["title"] = "Imported project"
+                spec["review"] = {key: True for key in spec["review"]}
+                valid = json.dumps(spec).encode()
+                duplicate = valid.replace(b'"version": 1', b'"version": 1, "version": 1', 1)
+                picker = page.locator("#import")
+                picker.set_input_files({"name": "duplicate.json", "mimeType": "application/json", "buffer": duplicate})
+                expect(page.locator("#status")).to_contain_text("Invalid project JSON")
+                expect(title).to_have_value("Current project")
+                page.once("dialog", lambda dialog: dialog.dismiss())
+                picker.set_input_files({"name": "valid.json", "mimeType": "application/json", "buffer": valid})
+                expect(page.locator("#status")).to_contain_text("Import cancelled")
+                expect(title).to_have_value("Current project")
+                page.once("dialog", lambda dialog: dialog.accept())
+                picker.set_input_files({"name": "valid.json", "mimeType": "application/json", "buffer": valid})
+                expect(page.locator("#status")).to_contain_text("Imported as an unapproved draft")
+                expect(title).to_have_value("Imported project")
+                headers = {"Origin": url, "X-Creator-Token": "import-test", "Content-Type": "application/json"}
+                response = page.request.post(url + "/api/import-project", headers=headers, data=valid)
+                self.assertEqual(response.status, 200)
+                self.assertFalse(any(response.json()["project"]["review"].values()))
+                self.assertEqual(page.request.post(url + "/api/import-project", headers=headers, data=duplicate).status, 400)
+                self.assertEqual(page.request.post(url + "/api/import-project", data=valid).status, 403)
+            finally:
+                browser.close()
+
     def test_request_boundaries(self):
         with sync_playwright() as pw, serve(lambda port: make_handler(port, "test-token")) as url:
             request = pw.request.new_context()
