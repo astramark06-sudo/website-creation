@@ -276,33 +276,37 @@ async function start(){
       onChange:()=>invalidateRelationalCheck()
     });
     $('relational-check-panel').hidden=!session.browser_checks_enabled;
-    let relationalReport=null,reportRevision=0;
+    let relationalReport=null,reportRevision=0,reportProfile=null;
     invalidateRelationalCheck=()=>{
-      reportRevision++;relationalReport=null;$('relational-check-save').disabled=true;
+      reportRevision++;relationalReport=null;reportProfile=null;$('relational-check-save').disabled=true;
       $('relational-check-result').textContent='';
       $('relational-check-status').textContent='Application changed. Run a new check.';
     };
     $('relational-check-engine').addEventListener('change',invalidateRelationalCheck);
     const relationalInput=()=>({title:project.title,description:project.description,schema:JSON.parse($('relational-schema').value),engine:$('relational-check-engine').value,confirmed:true});
-    $('relational-check').addEventListener('click',()=>run(async()=>{
+    const verifyApplication=profile=>run(async()=>{
       if(!session.browser_checks_enabled)return;
-      if(!confirm('Test a fresh temporary application using synthetic records in the selected installed browser?'))return;
+      const authenticated=profile==='authenticated';
+      const consent=authenticated?'Test a fresh authenticated local staging application with temporary accounts and synthetic records? Django and the selected browser must be installed. This does not approve public deployment.':'Test a fresh temporary application using synthetic records in the selected installed browser?';
+      if(!confirm(consent))return;
       invalidateRelationalCheck();const revision=reportRevision;
-      $('relational-check').disabled=true;$('relational-check-status').textContent='Running isolated application checks…';
+      $('relational-check').disabled=true;$('authenticated-check').disabled=true;$('relational-check-status').textContent='Running isolated application checks…';
       try{
         const input=relationalInput();
-        const result=await(await request('/api/relational-check',input)).json();
+        const result=await(await request(authenticated?'/api/authenticated-check':'/api/relational-check',input)).json();
         if(revision!==reportRevision||JSON.stringify(input)!==JSON.stringify(relationalInput()))return;
-        relationalReport=result;$('relational-check-save').disabled=false;
-        $('relational-check-status').textContent=result.status==='passed'?'Passed — fresh synthetic-data application check.':'Failed — review diagnostics and installed browser.';
+        relationalReport=result;reportProfile=profile;$('relational-check-save').disabled=false;
+        $('relational-check-status').textContent=result.status==='passed'?(authenticated?'Passed — fresh authenticated staging check; not public-release approval.':'Passed — fresh synthetic-data application check.'):'Failed — review diagnostics and optional local dependencies.';
         $('relational-check-result').textContent=JSON.stringify(result,null,2);
       }catch(error){
         if(revision===reportRevision)$('relational-check-status').textContent='Check failed. Verify the schema and installed browser.';
         throw error;
-      }finally{$('relational-check').disabled=false;}
-    }));
+      }finally{$('relational-check').disabled=false;$('authenticated-check').disabled=false;}
+    });
+    $('relational-check').addEventListener('click',()=>verifyApplication('relational'));
+    $('authenticated-check').addEventListener('click',()=>verifyApplication('authenticated'));
     $('relational-check-save').addEventListener('click',()=>{
-      if(relationalReport)download(new Blob([JSON.stringify(relationalReport,null,2)],{type:'application/json'}),'relational-report.json');
+      if(relationalReport&&reportProfile)download(new Blob([JSON.stringify(relationalReport,null,2)],{type:'application/json'}),reportProfile+'-report.json');
     });
     $('authenticated-export').addEventListener('click',()=>run(async()=>{
       if(!confirm('Export a separate local Django staging app for synthetic data and test accounts only? This does not publish a website.'))return;

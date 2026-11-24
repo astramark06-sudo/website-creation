@@ -99,9 +99,9 @@
 <button id="authenticated-export" type="button">Export authenticated staging app</button>
 <section id="relational-check-panel" hidden aria-labelledby="relational-check-heading">
 <h3 id="relational-check-heading">Optional application verification</h3>
-<p>Test a fresh temporary export using synthetic records. Existing databases are not accessed. Select a browser already installed locally.</p>
+<p>Test a fresh temporary export using synthetic records. Existing databases are not accessed. Select a browser already installed locally. Authenticated checks also require Django and use temporary test accounts; they do not approve public deployment.</p>
 <label for="relational-check-engine">Browser engine</label><select id="relational-check-engine"><option value="chromium">Chromium</option><option value="firefox">Firefox</option><option value="webkit">WebKit</option></select>
-<div class="actions"><button id="relational-check" type="button">Verify relational application</button><button id="relational-check-save" type="button" disabled>Download application report</button></div>
+<div class="actions"><button id="relational-check" type="button">Verify relational application</button><button id="authenticated-check" type="button">Verify authenticated application</button><button id="relational-check-save" type="button" disabled>Download application report</button></div>
 <p id="relational-check-status" role="status" aria-live="polite">No report for this application.</p>
 <pre id="relational-check-result"></pre></section></details>
 <p id="status" role="status" aria-live="polite">Loading workspace…</p>
